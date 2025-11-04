@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - DariKita</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .hero-gradient {
+        background: linear-gradient(
+          135deg,
+          #1e40af 0%,
+          #3b82f6 50%,
+          #60a5fa 100%
+        );
+      }
+      .card-hover {
+        transition: all 0.3s ease;
+      }
+      .card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+      .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .fade-in {
+        animation: fadeIn 0.5s ease-out;
+      }
+      .skeleton {
+        background: linear-gradient(
+          90deg,
+          #f0f0f0 25%,
+          #e0e0e0 50%,
+          #f0f0f0 75%
+        );
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+      }
+      @keyframes loading {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+      .sidebar {
+        transition: transform 0.3s ease;
+      }
+      @media (max-width: 768px) {
+        .sidebar.hidden-mobile {
+          transform: translateX(-100%);
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50 border-b border-gray-200">
+      <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <!-- Logo & Menu Toggle -->
+          <div class="flex items-center">
+            <button
+              id="sidebar-toggle"
+              class="mr-4 text-gray-600 hover:text-blue-600 lg:hidden"
+            >
+              <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div class="flex items-center">
+              <div
+                class="w-10 h-10 hero-gradient rounded-lg flex items-center justify-center mr-3"
+              >
+                <i class="fas fa-heart text-white text-lg"></i>
+              </div>
+              <div>
+                <div
+                  class="text-xl font-bold bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent"
+                >
+                  DariKita Admin
+                </div>
+                <div class="text-xs text-gray-500">Administrator Panel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Menu -->
+          <div class="flex items-center space-x-4">
+            <div class="hidden md:block text-right">
+              <p class="text-sm font-semibold text-gray-900" id="admin-name">
+                Loading...
+              </p>
+              <p class="text-xs text-gray-500">Administrator</p>
+            </div>
+            <div
+              class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center"
+            >
+              <i class="fas fa-user-shield text-blue-600"></i>
+            </div>
+            <button
+              id="logout-btn"
+              class="text-red-600 hover:text-red-700 transition-colors"
+            >
+              <i class="fas fa-sign-out-alt text-xl"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="flex">
+      <!-- Sidebar -->
+      <aside
+        id="sidebar"
+        class="sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white shadow-lg lg:shadow-none border-r border-gray-200 h-screen overflow-y-auto"
+      >
+        <div class="p-6">
+          <nav class="space-y-2">
+            <a
+              href="#dashboard"
+              data-section="dashboard"
+              class="nav-link flex items-center px-4 py-3 text-gray-700 bg-blue-50 text-blue-600 rounded-lg font-medium"
+            >
+              <i class="fas fa-tachometer-alt mr-3 w-5"></i>
+              Dashboard
+            </a>
+            <a
+              href="#causes"
+              data-section="causes"
+              class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <i class="fas fa-hand-holding-heart mr-3 w-5"></i>
+              Kelola Program
+            </a>
+            <a
+              href="#donations"
+              data-section="donations"
+              class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <i class="fas fa-donate mr-3 w-5"></i>
+              Kelola Donasi
+            </a>
+            <a
+              href="#reports"
+              data-section="reports"
+              class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <i class="fas fa-file-alt mr-3 w-5"></i>
+              Laporan
+            </a>
+            <a
+              href="#users"
+              data-section="users"
+              class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <i class="fas fa-users mr-3 w-5"></i>
+              Kelola User
+            </a>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Sidebar Overlay (Mobile) -->
+      <div
+        id="sidebar-overlay"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+      ></div>
+
+      <!-- Main Content -->
+      <main class="flex-1 p-6 lg:p-8 overflow-y-auto h-screen">
+        <!-- Dashboard Section -->
+        <section id="section-dashboard" class="section-content">
+          <div class="mb-8 fade-in">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+              Dashboard Overview
+            </h1>
+            <p class="text-gray-600">
+              Selamat datang di panel administrator DariKita
+            </p>
+          </div>
+
+          <!-- Statistics Cards -->
+          <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+          >
+            <!-- Total Donations -->
+            <div class="stat-card card-hover fade-in">
+              <div class="flex items-center justify-between mb-4">
+                <div
+                  class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center"
+                >
+                  <i class="fas fa-coins text-green-600 text-xl"></i>
+                </div>
+                <span class="text-xs text-gray-500">Total</span>
+              </div>
+              <h3
+                class="text-2xl font-bold text-gray-900 mb-1"
+                id="stat-total-donations"
+              >
+                Rp 0
+              </h3>
+              <p class="text-sm text-gray-600">Total Donasi Masuk</p>
+            </div>
+
+            <!-- Active Causes -->
+            <div
+              class="stat-card card-hover fade-in"
+              style="animation-delay: 0.1s"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <div
+                  class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center"
+                >
+                  <i
+                    class="fas fa-hand-holding-heart text-blue-600 text-xl"
+                  ></i>
+                </div>
+                <span class="text-xs text-gray-500">Aktif</span>
+              </div>
+              <h3
+                class="text-2xl font-bold text-gray-900 mb-1"
+                id="stat-active-causes"
+              >
+                0
+              </h3>
+              <p class="text-sm text-gray-600">Program Aktif</p>
+            </div>
+
+            <!-- Verified Donations -->
+            <div
+              class="stat-card card-hover fade-in"
+              style="animation-delay: 0.2s"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <div
+                  class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center"
+                >
+                  <i class="fas fa-check-circle text-purple-600 text-xl"></i>
+                </div>
+                <span class="text-xs text-gray-500">Verified</span>
+              </div>
+              <h3
+                class="text-2xl font-bold text-gray-900 mb-1"
+                id="stat-verified-donations"
+              >
+                0
+              </h3>
+              <p class="text-sm text-gray-600">Donasi Terverifikasi</p>
+            </div>
+
+            <!-- Total Users -->
+            <div
+              class="stat-card card-hover fade-in"
+              style="animation-delay: 0.3s"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <div
+                  class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center"
+                >
+                  <i class="fas fa-users text-orange-600 text-xl"></i>
+                </div>
+                <span class="text-xs text-gray-500">Total</span>
+              </div>
+              <h3
+                class="text-2xl font-bold text-gray-900 mb-1"
+                id="stat-total-users"
+              >
+                0
+              </h3>
+              <p class="text-sm text-gray-600">Total Pengguna</p>
+            </div>
+          </div>
+
+          <!-- Recent Activities -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Recent Donations -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+              <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-900">Donasi Terbaru</h2>
+                <a
+                  href="#donations"
+                  class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  Lihat Semua →
+                </a>
+              </div>
+              <div id="recent-donations" class="space-y-4">
+                <div class="skeleton h-16 rounded-lg"></div>
+                <div class="skeleton h-16 rounded-lg"></div>
+                <div class="skeleton h-16 rounded-lg"></div>
+              </div>
+            </div>
+
+            <!-- Recent Causes -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+              <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-900">Program Terbaru</h2>
+                <a
+                  href="#causes"
+                  class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  Lihat Semua →
+                </a>
+              </div>
+              <div id="recent-causes" class="space-y-4">
+                <div class="skeleton h-16 rounded-lg"></div>
+                <div class="skeleton h-16 rounded-lg"></div>
+                <div class="skeleton h-16 rounded-lg"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Causes Section -->
+        <section id="section-causes" class="section-content hidden">
+          <div class="mb-8 flex items-center justify-between">
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                Kelola Program
+              </h1>
+              <p class="text-gray-600">Manage semua program donasi</p>
+            </div>
+            <button
+              id="btn-create-cause"
+              class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              <i class="fas fa-plus mr-2"></i>Buat Program
+            </button>
+          </div>
+
+          <div id="causes-list" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="skeleton h-48 rounded-xl"></div>
+            <div class="skeleton h-48 rounded-xl"></div>
+          </div>
+        </section>
+
+        <!-- Donations Section -->
+        <section id="section-donations" class="section-content hidden">
+          <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Kelola Donasi</h1>
+            <p class="text-gray-600">
+              Verifikasi dan kelola semua donasi masuk
+            </p>
+          </div>
+
+          <!-- Filter -->
+          <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap gap-4">
+              <select
+                id="filter-donation-status"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Semua Status</option>
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+                <option value="failed">Failed</option>
+              </select>
+              <button
+                id="btn-filter-donations"
+                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <i class="fas fa-filter mr-2"></i>Filter
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="donations-list"
+            class="bg-white rounded-xl shadow-lg overflow-hidden"
+          >
+            <div class="p-6 space-y-4">
+              <div class="skeleton h-20 rounded-lg"></div>
+              <div class="skeleton h-20 rounded-lg"></div>
+              <div class="skeleton h-20 rounded-lg"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="section-reports" class="section-content hidden">
+          <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+              Laporan Transparansi
+            </h1>
+            <p class="text-gray-600">
+              Upload bukti penyaluran dan generate laporan
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+              <div
+                class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4"
+              >
+                <i class="fas fa-file-export text-blue-600 text-xl"></i>
+              </div>
+              <h3 class="text-lg font-bold text-gray-900 mb-2">Export Excel</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Download laporan donasi dalam format Excel
+              </p>
+              <button
+                class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <i class="fas fa-download mr-2"></i>Download
+              </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+              <div
+                class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4"
+              >
+                <i class="fas fa-file-pdf text-red-600 text-xl"></i>
+              </div>
+              <h3 class="text-lg font-bold text-gray-900 mb-2">Export PDF</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Download laporan donasi dalam format PDF
+              </p>
+              <button
+                class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <i class="fas fa-download mr-2"></i>Download
+              </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+              <div
+                class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4"
+              >
+                <i class="fas fa-chart-line text-green-600 text-xl"></i>
+              </div>
+              <h3 class="text-lg font-bold text-gray-900 mb-2">Statistik</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Lihat statistik lengkap donasi
+              </p>
+              <button
+                class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <i class="fas fa-eye mr-2"></i>Lihat
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-6">
+              Upload Bukti Penyaluran
+            </h2>
+            <div id="reports-list" class="space-y-4">
+              <p class="text-gray-500 text-center py-8">
+                Pilih program untuk upload bukti penyaluran
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Users Section -->
+        <section id="section-users" class="section-content hidden">
+          <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+              Kelola Pengguna
+            </h1>
+            <p class="text-gray-600">Manage semua pengguna dan permission</p>
+          </div>
+
+          <div
+            id="users-list"
+            class="bg-white rounded-xl shadow-lg overflow-hidden"
+          >
+            <div class="p-6 space-y-4">
+              <div class="skeleton h-20 rounded-lg"></div>
+              <div class="skeleton h-20 rounded-lg"></div>
+              <div class="skeleton h-20 rounded-lg"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div
+        class="bg-white rounded-2xl p-8 flex flex-col items-center shadow-xl max-w-sm"
+      >
+        <div
+          class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"
+        ></div>
+        <p class="mt-4 text-gray-700 font-medium text-lg">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Include API and Admin Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
+  </body>
+</html>

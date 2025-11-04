@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DariKita API Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .test-passed {
+        background: #10b981;
+        color: white;
+      }
+      .test-failed {
+        background: #ef4444;
+        color: white;
+      }
+      .test-pending {
+        background: #f59e0b;
+        color: white;
+      }
+      pre {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+      <!-- Header -->
+      <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">
+          <i class="fas fa-flask text-blue-600"></i> DariKita API Tester
+        </h1>
+        <p class="text-gray-600">Test semua API endpoint tanpa Postman</p>
+      </div>
+
+      <!-- Configuration -->
+      <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">⚙️ Configuration</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >API Base URL</label
+            >
+            <input
+              type="text"
+              id="api-base-url"
+              value="http://localhost:5000/api"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >Admin Token (Bearer)</label
+            >
+            <input
+              type="password"
+              id="admin-token"
+              placeholder="Paste your admin token here"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div class="mt-4 flex space-x-2">
+          <button
+            onclick="loadTokenFromStorage()"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <i class="fas fa-download"></i> Load Token from LocalStorage
+          </button>
+          <button
+            onclick="clearResults()"
+            class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            <i class="fas fa-trash"></i> Clear Results
+          </button>
+        </div>
+      </div>
+
+      <!-- Test Sections -->
+      <div class="space-y-6">
+        <!-- 1. Admin Stats Test -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4">
+            <span
+              id="status-stats"
+              class="inline-block w-6 h-6 rounded-full bg-gray-300"
+            ></span>
+            1. Admin Dashboard Stats
+          </h2>
+          <p class="text-gray-600 mb-4">Test: GET /api/admin/stats</p>
+          <button
+            onclick="testAdminStats()"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <i class="fas fa-play"></i> Run Test
+          </button>
+          <div id="result-stats" class="mt-4 hidden">
+            <h3 class="font-semibold mb-2">Response:</h3>
+            <pre id="response-stats"></pre>
+          </div>
+        </div>
+
+        <!-- 2. Get All Users Test -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4">
+            <span
+              id="status-users"
+              class="inline-block w-6 h-6 rounded-full bg-gray-300"
+            ></span>
+            2. Get All Users
+          </h2>
+          <p class="text-gray-600 mb-4">Test: GET /api/admin/users</p>
+          <button
+            onclick="testGetUsers()"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <i class="fas fa-play"></i> Run Test
+          </button>
+          <div id="result-users" class="mt-4 hidden">
+            <h3 class="font-semibold mb-2">Response:</h3>
+            <pre id="response-users"></pre>
+          </div>
+        </div>
+
+        <!-- 3. Get All Donations Test -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4">
+            <span
+              id="status-donations"
+              class="inline-block w-6 h-6 rounded-full bg-gray-300"
+            ></span>
+            3. Get All Donations
+          </h2>
+          <p class="text-gray-600 mb-4">Test: GET /api/admin/donations</p>
+          <button
+            onclick="testGetDonations()"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <i class="fas fa-play"></i> Run Test
+          </button>
+          <div id="result-donations" class="mt-4 hidden">
+            <h3 class="font-semibold mb-2">Response:</h3>
+            <pre id="response-donations"></pre>
+          </div>
+        </div>
+
+        <!-- 4. Get All Causes Test -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4">
+            <span
+              id="status-causes"
+              class="inline-block w-6 h-6 rounded-full bg-gray-300"
+            ></span>
+            4. Get All Causes
+          </h2>
+          <p class="text-gray-600 mb-4">
+            Test: GET /api/causes (Public endpoint)
+          </p>
+          <button
+            onclick="testGetCauses()"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <i class="fas fa-play"></i> Run Test
+          </button>
+          <div id="result-causes" class="mt-4 hidden">
+            <h3 class="font-semibold mb-2">Response:</h3>
+            <pre id="response-causes"></pre>
+          </div>
+        </div>
+
+        <!-- 5. Create Cause Test -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4">
+            <span
+              id="status-create-cause"
+              class="inline-block w-6 h-6 rounded-full bg-gray-300"
+            ></span>
+            5. Create Cause (with Image URL)
+          </h2>
+          <p class="text-gray-600 mb-4">Test: POST /api/causes</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <input
+              type="text"
+              id="cause-title"
+              placeholder="Title"
+              class="px-4 py-2 border rounded-lg"
+              value="Test Cause from API Tester"
+            />
+            <select id="cause-category" class="px-4 py-2 border rounded-lg">
+              <option value="pendidikan">Pendidikan</option>
+              <option value="kesehatan">Kesehatan</option>
+              <option value="sosial">Sosial</option>
+              <option value="bencana">Bencana</option>
+              <option value="lingkungan">Lingkungan</option>
+            </select>
+            <input
+              type="number"
+              id="cause-target"
+              placeholder="Target Amount"
+              class="px-4 py-2 border rounded-lg"
+              value="5000000"
+            />
+            <input
+              type="date"
+              id="cause-deadline"
+              class="px-4 py-2 border rounded-lg"
+            />
+            <textarea
+              id="cause-description"
+              placeholder="Description"
+              class="px-4 py-2 border rounded-lg col-span-2"
+              rows="2"
+            >
+This is a test cause created from API Tester</textarea
+            >
+            <input
+              type="url"
+              id="cause-image"
+              placeholder="Image URL (optional)"
+              class="px-4 py-2 border rounded-lg col-span-2"
+              value="https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800"
+            />
+          </div>
+          <button
+            onclick="testCreateCause()"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <i class="fas fa-play"></i> Run Test
+          </button>
+          <div id="result-create-cause" class="mt-4 hidden">
+            <h3 class="font-semibold mb-2">Response:</h3>
+            <pre id="response-create-cause"></pre>
+          </div>
+        </div>
+
+        <!-- 6. Create Cause with File Upload -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-xl font-bold mb-4">
+            <span
+              id="status-create-cause-upload"
+              class="inline-block w-6 h-6 rounded-full bg-gray-300"
+            ></span>
+            6. Create Cause (with File Upload)
+          </h2>
+          <p class="text-gray-600 mb-4">
+            Test: POST /api/causes (with multipart/form-data)
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <input
+              type="text"
+              id="cause-title-upload"
+              placeholder="Title"
+              class="px-4 py-2 border rounded-lg"
+              value="Test Cause with Upload"
+            />
+            <select
+              id="cause-category-upload"
+              class="px-4 py-2 border rounded-lg"
+            >
+              <option value="pendidikan">Pendidikan</option>
+              <option value="kesehatan">Kesehatan</option>
+              <option value="sosial">Sosial</option>
+            </select>
+            <input
+              type="number"
+              id="cause-target-upload"
+              placeholder="Target Amount"
+              class="px-4 py-2 border rounded-lg"
+              value="3000000"
+            />
+            <input
+              type="date"
+              id="cause-deadline-upload"
+              class="px-4 py-2 border rounded-lg"
+            />
+            <textarea
+              id="cause-description-upload"
+              placeholder="Description"
+              class="px-4 py-2 border rounded-lg col-span-2"
+              rows="2"
+            >
+This cause has an uploaded image</textarea
+            >
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Upload Image</label
+              >
+              <input
+                type="file"
+                id="cause-image-upload"
+                accept="image/*"
+                class="px-4 py-2 border rounded-lg w-full"
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                Max 5MB. JPG, PNG, or WEBP
+              </p>
+            </div>
+          </div>
+          <button
+            onclick="testCreateCauseWithUpload()"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <i class="fas fa-play"></i> Run Test
+          </button>
+          <div id="result-create-cause-upload" class="mt-4 hidden">
+            <h3 class="font-semibold mb-2">Response:</h3>
+            <pre id="response-create-cause-upload"></pre>
+          </div>
+        </div>
+
+        <!-- 7. Run All Tests -->
+        <div
+          class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6 text-white"
+        >
+          <h2 class="text-2xl font-bold mb-4">
+            <i class="fas fa-rocket"></i> Run All Tests
+          </h2>
+          <p class="mb-4">
+            Execute all tests sequentially (Tests 1-4 only, skipping create
+            operations)
+          </p>
+          <button
+            onclick="runAllTests()"
+            class="px-8 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100"
+          >
+            <i class="fas fa-play-circle"></i> Run All Tests
+          </button>
+          <div id="all-tests-progress" class="mt-4 hidden">
+            <div class="bg-white/20 rounded-lg p-4">
+              <p id="progress-text" class="font-semibold">Running tests...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div id="summary" class="bg-white rounded-lg shadow-lg p-6 mt-6 hidden">
+        <h2 class="text-xl font-bold mb-4">📊 Test Summary</h2>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="bg-green-100 p-4 rounded-lg text-center">
+            <p class="text-3xl font-bold text-green-600" id="passed-count">0</p>
+            <p class="text-sm text-gray-600">Passed</p>
+          </div>
+          <div class="bg-red-100 p-4 rounded-lg text-center">
+            <p class="text-3xl font-bold text-red-600" id="failed-count">0</p>
+            <p class="text-sm text-gray-600">Failed</p>
+          </div>
+          <div class="bg-orange-100 p-4 rounded-lg text-center">
+            <p class="text-3xl font-bold text-orange-600" id="pending-count">
+              0
+            </p>
+            <p class="text-sm text-gray-600">Pending</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE_URL = () => document.getElementById("api-base-url").value;
+      const ADMIN_TOKEN = () => document.getElementById("admin-token").value;
+
+      // Set default deadline to 30 days from now
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 30);
+      document.getElementById("cause-deadline").valueAsDate = tomorrow;
+      document.getElementById("cause-deadline-upload").valueAsDate = tomorrow;
+
+      function loadTokenFromStorage() {
+        const token = localStorage.getItem("token");
+        if (token) {
+          document.getElementById("admin-token").value = token;
+          alert("✅ Token loaded from localStorage!");
+        } else {
+          alert("❌ No token found in localStorage. Please login first.");
+        }
+      }
+
+      function clearResults() {
+        document
+          .querySelectorAll('[id^="result-"]')
+          .forEach((el) => el.classList.add("hidden"));
+        document.querySelectorAll('[id^="status-"]').forEach((el) => {
+          el.style.backgroundColor = "#d1d5db";
+        });
+        document.getElementById("summary").classList.add("hidden");
+      }
+
+      function updateStatus(testName, status) {
+        const statusEl = document.getElementById(`status-${testName}`);
+        if (status === "success") {
+          statusEl.style.backgroundColor = "#10b981";
+        } else if (status === "error") {
+          statusEl.style.backgroundColor = "#ef4444";
+        } else {
+          statusEl.style.backgroundColor = "#f59e0b";
+        }
+      }
+
+      function showResult(testName, data, status) {
+        const resultEl = document.getElementById(`result-${testName}`);
+        const responseEl = document.getElementById(`response-${testName}`);
+
+        resultEl.classList.remove("hidden");
+        responseEl.textContent = JSON.stringify(data, null, 2);
+
+        updateStatus(testName, status);
+        updateSummary();
+      }
+
+      function updateSummary() {
+        const statuses = document.querySelectorAll('[id^="status-"]');
+        let passed = 0,
+          failed = 0,
+          pending = 0;
+
+        statuses.forEach((status) => {
+          const bg = status.style.backgroundColor;
+          if (bg === "rgb(16, 185, 129)") passed++; // green
+          else if (bg === "rgb(239, 68, 68)") failed++; // red
+          else if (bg === "rgb(245, 158, 11)") pending++; // orange
+        });
+
+        document.getElementById("passed-count").textContent = passed;
+        document.getElementById("failed-count").textContent = failed;
+        document.getElementById("pending-count").textContent =
+          statuses.length - passed - failed;
+        document.getElementById("summary").classList.remove("hidden");
+      }
+
+      async function makeRequest(url, options = {}) {
+        try {
+          const response = await fetch(url, {
+            ...options,
+            headers: {
+              ...options.headers,
+            },
+          });
+          const data = await response.json();
+          return { success: response.ok, data, status: response.status };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      async function testAdminStats() {
+        updateStatus("stats", "pending");
+        const result = await makeRequest(`${API_BASE_URL()}/admin/stats`, {
+          headers: {
+            Authorization: `Bearer ${ADMIN_TOKEN()}`,
+          },
+        });
+        showResult(
+          "stats",
+          result.data || result,
+          result.success ? "success" : "error"
+        );
+      }
+
+      async function testGetUsers() {
+        updateStatus("users", "pending");
+        const result = await makeRequest(`${API_BASE_URL()}/admin/users`, {
+          headers: {
+            Authorization: `Bearer ${ADMIN_TOKEN()}`,
+          },
+        });
+        showResult(
+          "users",
+          result.data || result,
+          result.success ? "success" : "error"
+        );
+      }
+
+      async function testGetDonations() {
+        updateStatus("donations", "pending");
+        const result = await makeRequest(`${API_BASE_URL()}/admin/donations`, {
+          headers: {
+            Authorization: `Bearer ${ADMIN_TOKEN()}`,
+          },
+        });
+        showResult(
+          "donations",
+          result.data || result,
+          result.success ? "success" : "error"
+        );
+      }
+
+      async function testGetCauses() {
+        updateStatus("causes", "pending");
+        const result = await makeRequest(`${API_BASE_URL()}/causes`);
+        showResult(
+          "causes",
+          result.data || result,
+          result.success ? "success" : "error"
+        );
+      }
+
+      async function testCreateCause() {
+        updateStatus("create-cause", "pending");
+
+        const causeData = {
+          title: document.getElementById("cause-title").value,
+          category: document.getElementById("cause-category").value,
+          targetAmount: document.getElementById("cause-target").value,
+          deadline: document.getElementById("cause-deadline").value,
+          description: document.getElementById("cause-description").value,
+          image: document.getElementById("cause-image").value,
+        };
+
+        const result = await makeRequest(`${API_BASE_URL()}/causes`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${ADMIN_TOKEN()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(causeData),
+        });
+
+        showResult(
+          "create-cause",
+          result.data || result,
+          result.success ? "success" : "error"
+        );
+      }
+
+      async function testCreateCauseWithUpload() {
+        updateStatus("create-cause-upload", "pending");
+
+        const formData = new FormData();
+        formData.append(
+          "title",
+          document.getElementById("cause-title-upload").value
+        );
+        formData.append(
+          "category",
+          document.getElementById("cause-category-upload").value
+        );
+        formData.append(
+          "targetAmount",
+          document.getElementById("cause-target-upload").value
+        );
+        formData.append(
+          "deadline",
+          document.getElementById("cause-deadline-upload").value
+        );
+        formData.append(
+          "description",
+          document.getElementById("cause-description-upload").value
+        );
+
+        const imageFile =
+          document.getElementById("cause-image-upload").files[0];
+        if (imageFile) {
+          formData.append("image", imageFile);
+        } else {
+          alert("❌ Please select an image file first!");
+          updateStatus("create-cause-upload", "error");
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE_URL()}/causes`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${ADMIN_TOKEN()}`,
+            },
+            body: formData,
+          });
+          const data = await response.json();
+          showResult(
+            "create-cause-upload",
+            data,
+            response.ok ? "success" : "error"
+          );
+        } catch (error) {
+          showResult("create-cause-upload", { error: error.message }, "error");
+        }
+      }
+
+      async function runAllTests() {
+        document
+          .getElementById("all-tests-progress")
+          .classList.remove("hidden");
+        document.getElementById("progress-text").textContent =
+          "Running Test 1/4: Admin Stats...";
+        await testAdminStats();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        document.getElementById("progress-text").textContent =
+          "Running Test 2/4: Get Users...";
+        await testGetUsers();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        document.getElementById("progress-text").textContent =
+          "Running Test 3/4: Get Donations...";
+        await testGetDonations();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        document.getElementById("progress-text").textContent =
+          "Running Test 4/4: Get Causes...";
+        await testGetCauses();
+
+        document.getElementById("progress-text").textContent =
+          "✅ All tests completed!";
+        setTimeout(() => {
+          document.getElementById("all-tests-progress").classList.add("hidden");
+        }, 2000);
+      }
+    </script>
+  </body>
+</html>

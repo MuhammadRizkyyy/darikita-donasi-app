@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - DariKita</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="h-full bg-gradient-to-br from-blue-50 to-blue-100">
+    <div class="min-h-screen flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+          <div
+            class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full mb-4"
+          >
+            <i class="fas fa-heart text-white text-2xl"></i>
+          </div>
+          <h1 class="text-3xl font-bold text-gray-900">DariKita</h1>
+          <p class="text-gray-600 mt-2">Login ke akun Anda</p>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              <i class="fas fa-envelope mr-2"></i>Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              required
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="nama@email.com"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              <i class="fas fa-lock mr-2"></i>Password
+            </label>
+            <div class="relative">
+              <input
+                type="password"
+                id="password"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onclick="togglePassword()"
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                <i class="fas fa-eye" id="toggle-icon"></i>
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="login-btn"
+            class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105"
+          >
+            <i class="fas fa-sign-in-alt mr-2"></i>Login
+          </button>
+        </form>
+
+        <!-- Register Link -->
+        <div class="mt-6 text-center">
+          <p class="text-gray-600">
+            Belum punya akun?
+            <a
+              href="register.html"
+              class="text-blue-600 hover:text-blue-800 font-semibold"
+            >
+              Daftar sekarang
+            </a>
+          </p>
+        </div>
+
+        <!-- Back to Home -->
+        <div class="mt-4 text-center">
+          <a
+            href="index.html"
+            class="text-gray-500 hover:text-gray-700 text-sm"
+          >
+            <i class="fas fa-arrow-left mr-2"></i>Kembali ke Beranda
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white rounded-lg p-6 flex flex-col items-center shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
+        ></div>
+        <p class="mt-4 text-gray-700 font-medium">Logging in...</p>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE_URL = "http://localhost:5000/api";
+
+      // Check if already logged in
+      document.addEventListener("DOMContentLoaded", () => {
+        const token = localStorage.getItem("token");
+        const userData = localStorage.getItem("userData");
+
+        if (token && userData) {
+          console.log("Already logged in, checking role...");
+          try {
+            const user = JSON.parse(userData);
+            console.log("User role:", user.role);
+
+            // Redirect based on role
+            redirectBasedOnRole(user.role);
+          } catch (error) {
+            console.error("Error parsing user data:", error);
+            localStorage.clear();
+          }
+        }
+      });
+
+      // Redirect based on role
+      function redirectBasedOnRole(role) {
+        switch (role) {
+          case "admin":
+            console.log("Redirecting to admin dashboard...");
+            window.location.href = "admin.html";
+            break;
+          case "auditor":
+            console.log("Redirecting to auditor dashboard...");
+            window.location.href = "auditor.html";
+            break;
+          default:
+            console.log("Redirecting to user dashboard...");
+            window.location.href = "dashboard.html";
+            break;
+        }
+      }
+
+      // Toggle password visibility
+      function togglePassword() {
+        const passwordInput = document.getElementById("password");
+        const toggleIcon = document.getElementById("toggle-icon");
+
+        if (passwordInput.type === "password") {
+          passwordInput.type = "text";
+          toggleIcon.classList.remove("fa-eye");
+          toggleIcon.classList.add("fa-eye-slash");
+        } else {
+          passwordInput.type = "password";
+          toggleIcon.classList.remove("fa-eye-slash");
+          toggleIcon.classList.add("fa-eye");
+        }
+      }
+
+      // Handle login form submission
+      document
+        .getElementById("login-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          const loginBtn = document.getElementById("login-btn");
+
+          console.log("🔐 Attempting login for:", email);
+
+          // Disable button and show loading
+          loginBtn.disabled = true;
+          loginBtn.innerHTML =
+            '<i class="fas fa-spinner fa-spin mr-2"></i>Logging in...';
+          showLoading();
+
+          try {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+            console.log("📡 Login response:", data);
+
+            if (response.ok && data.success) {
+              // PERBAIKAN: Backend mengirim data.data.token dan data.data.user
+              const token = data.data.token;
+              const user = data.data.user;
+
+              // Validasi data
+              if (!token || !user) {
+                throw new Error("Invalid response structure");
+              }
+
+              // Save token and user data
+              localStorage.setItem("token", token);
+              localStorage.setItem("userData", JSON.stringify(user));
+
+              console.log("✅ Login successful!");
+              console.log("👤 User data saved:", user);
+              console.log("👤 User role:", user.role);
+              console.log("🔑 Token saved:", token.substring(0, 20) + "...");
+
+              showNotification(
+                `Login berhasil! Selamat datang, ${user.name}!`,
+                "success"
+              );
+
+              // Redirect based on role after 1.5 seconds
+              setTimeout(() => {
+                console.log("🔀 Redirecting based on role:", user.role);
+                redirectBasedOnRole(user.role);
+              }, 1500);
+            } else {
+              console.error("❌ Login failed:", data.message);
+              showNotification(
+                data.message || "Login gagal. Periksa email dan password Anda.",
+                "error"
+              );
+
+              // Re-enable button
+              loginBtn.disabled = false;
+              loginBtn.innerHTML =
+                '<i class="fas fa-sign-in-alt mr-2"></i>Login';
+            }
+          } catch (error) {
+            console.error("❌ Login error:", error);
+            showNotification(
+              error.message || "Terjadi kesalahan. Pastikan server berjalan.",
+              "error"
+            );
+
+            // Re-enable button
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Login';
+          } finally {
+            hideLoading();
+          }
+        });
+
+      // Show loading overlay
+      function showLoading() {
+        document.getElementById("loading-overlay").classList.remove("hidden");
+      }
+
+      // Hide loading overlay
+      function hideLoading() {
+        document.getElementById("loading-overlay").classList.add("hidden");
+      }
+
+      // Show notification
+      function showNotification(message, type = "info") {
+        const existingNotif = document.getElementById("notification-toast");
+        if (existingNotif) {
+          existingNotif.remove();
+        }
+
+        const notif = document.createElement("div");
+        notif.id = "notification-toast";
+        notif.className = "fixed top-4 right-4 z-50 animate-slide-in";
+
+        const colors = {
+          success: "bg-green-500",
+          error: "bg-red-500",
+          warning: "bg-yellow-500",
+          info: "bg-blue-500",
+        };
+
+        const icons = {
+          success: "fa-check-circle",
+          error: "fa-times-circle",
+          warning: "fa-exclamation-triangle",
+          info: "fa-info-circle",
+        };
+
+        notif.innerHTML = `
+          <div class="${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px]">
+            <i class="fas ${icons[type]} text-xl"></i>
+            <span class="flex-1">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        `;
+
+        document.body.appendChild(notif);
+
+        setTimeout(() => {
+          if (notif && notif.parentElement) {
+            notif.remove();
+          }
+        }, 5000);
+      }
+    </script>
+
+    <style>
+      @keyframes slide-in {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .animate-slide-in {
+        animation: slide-in 0.3s ease-out;
+      }
+    </style>
+  </body>
+</html>
