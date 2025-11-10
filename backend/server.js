@@ -42,6 +42,7 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/causes", require("./routes/causes"));
 app.use("/api/donations", require("./routes/donations"));
 app.use("/api/admin", require("./routes/admin"));
+app.use("/api/midtrans", require("./routes/midtrans"));
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

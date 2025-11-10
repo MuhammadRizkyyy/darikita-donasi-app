@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detail Program - DariKita</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <!-- Midtrans Snap -->
+    <script
+      type="text/javascript"
+      src="https://app.sandbox.midtrans.com/snap/snap.js"
+      data-client-key="SB-Mid-client-jvznO7_nOuRkV7yT"
+    ></script>
+    <style>
+      .hero-gradient {
+        background: linear-gradient(
+          135deg,
+          #1e40af 0%,
+          #3b82f6 50%,
+          #60a5fa 100%
+        );
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #1e40af, #3b82f6);
+        transition: all 0.3s ease;
+      }
+      .btn-primary:hover {
+        background: linear-gradient(135deg, #1e3a8a, #1e40af);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+      }
+      .progress-bar-animated {
+        background: linear-gradient(90deg, #059669, #10b981);
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .fade-in {
+        animation: fadeIn 0.6s ease-out;
+      }
+    </style>
+  </head>
+  <body class="h-full bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <a href="index.html" class="flex items-center">
+            <div
+              class="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center mr-3"
+            >
+              <i class="fas fa-heart text-white text-lg"></i>
+            </div>
+            <span
+              class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent"
+              >DariKita</span
+            >
+          </a>
+          <a
+            href="index.html"
+            class="text-gray-600 hover:text-blue-600 transition-colors"
+          >
+            <i class="fas fa-arrow-left mr-2"></i>Kembali ke Beranda
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Loading State -->
+    <div
+      id="loading-state"
+      class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
+    >
+      <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
+        <div
+          class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"
+        ></div>
+        <p class="text-gray-600">Memuat detail program...</p>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div
+      id="cause-content"
+      class="hidden max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in"
+    >
+      <!-- Breadcrumb -->
+      <div class="mb-6">
+        <nav class="flex" aria-label="Breadcrumb">
+          <ol class="flex items-center space-x-2 text-sm">
+            <li>
+              <a href="index.html" class="text-gray-500 hover:text-blue-600"
+                >Beranda</a
+              >
+            </li>
+            <li><i class="fas fa-chevron-right text-gray-400 text-xs"></i></li>
+            <li>
+              <a
+                href="index.html#program"
+                class="text-gray-500 hover:text-blue-600"
+                >Program</a
+              >
+            </li>
+            <li><i class="fas fa-chevron-right text-gray-400 text-xs"></i></li>
+            <li class="text-blue-600 font-medium" id="breadcrumb-title">
+              Detail Program
+            </li>
+          </ol>
+        </nav>
+      </div>
+
+      <!-- Main Card -->
+      <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Image Banner -->
+        <div class="relative h-64 bg-gray-200 overflow-hidden">
+          <img
+            id="cause-image"
+            src=""
+            alt="Program"
+            class="w-full h-full object-cover"
+            onerror="this.src='https://via.placeholder.com/800x400?text=DariKita'"
+          />
+        </div>
+
+        <div class="p-6 sm:p-8">
+          <!-- Category Badge -->
+          <div class="flex items-start justify-between mb-4">
+            <span
+              id="category-badge"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+            >
+              <i class="fas fa-heart mr-2"></i>
+              <span id="category-name">Loading...</span>
+            </span>
+            <button
+              onclick="shareCause()"
+              class="text-gray-400 hover:text-blue-600 transition-colors"
+            >
+              <i class="fas fa-share-alt text-xl"></i>
+            </button>
+          </div>
+
+          <!-- Title -->
+          <h1 id="cause-title" class="text-3xl font-bold text-gray-900 mb-4">
+            Loading...
+          </h1>
+
+          <!-- Description -->
+          <p id="cause-description" class="text-gray-700 leading-relaxed mb-6">
+            Loading...
+          </p>
+
+          <!-- Progress Section -->
+          <div
+            class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 mb-6"
+          >
+            <h3 class="text-lg font-bold text-gray-900 mb-4">
+              Progress Donasi
+            </h3>
+
+            <!-- Progress Bar -->
+            <div class="mb-4">
+              <div class="flex justify-between text-sm mb-2">
+                <span class="text-gray-600">Terkumpul</span>
+                <span id="progress-percentage" class="font-bold text-blue-600"
+                  >0%</span
+                >
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div
+                  id="progress-bar"
+                  class="progress-bar-animated h-4 rounded-full transition-all duration-500"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Amount Stats -->
+            <div class="grid grid-cols-2 gap-4 mt-4">
+              <div class="bg-white rounded-lg p-4">
+                <p class="text-sm text-gray-600 mb-1">Terkumpul</p>
+                <p id="current-amount" class="text-xl font-bold text-green-600">
+                  Rp 0
+                </p>
+              </div>
+              <div class="bg-white rounded-lg p-4">
+                <p class="text-sm text-gray-600 mb-1">Target</p>
+                <p id="target-amount" class="text-xl font-bold text-gray-900">
+                  Rp 0
+                </p>
+              </div>
+            </div>
+
+            <!-- Additional Info -->
+            <div
+              class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-blue-200"
+            >
+              <div class="text-center">
+                <p id="total-donors" class="text-2xl font-bold text-gray-900">
+                  0
+                </p>
+                <p class="text-sm text-gray-600">Donatur</p>
+              </div>
+              <div class="text-center">
+                <p id="days-remaining" class="text-2xl font-bold text-gray-900">
+                  0
+                </p>
+                <p class="text-sm text-gray-600">Hari Tersisa</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Donation Button -->
+          <button
+            onclick="openDonationModal()"
+            class="w-full btn-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center space-x-2"
+          >
+            <i class="fas fa-heart"></i>
+            <span>Donasi Sekarang</span>
+          </button>
+        </div>
+
+        <!-- Progress Updates Section -->
+        <div
+          id="updates-section"
+          class="bg-gray-50 p-6 sm:p-8 border-t border-gray-200"
+        >
+          <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+            <i class="fas fa-history text-blue-600 mr-2"></i>
+            Update Terbaru
+          </h3>
+          <div id="updates-container" class="space-y-4">
+            <p class="text-gray-500 text-center py-8">Belum ada update</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div
+      id="error-state"
+      class="hidden max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
+    >
+      <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
+        <i class="fas fa-exclamation-circle text-red-500 text-6xl mb-4"></i>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">
+          Program Tidak Ditemukan
+        </h2>
+        <p class="text-gray-600 mb-6">
+          Program yang Anda cari tidak tersedia atau telah dihapus.
+        </p>
+        <a
+          href="index.html"
+          class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all"
+        >
+          <i class="fas fa-arrow-left mr-2"></i>Kembali ke Beranda
+        </a>
+      </div>
+    </div>
+
+    <!-- Donation Modal -->
+    <div
+      id="donation-modal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-2xl max-w-md w-full max-h-screen overflow-y-auto p-8"
+      >
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-bold text-gray-900">Donasi untuk Program</h3>
+          <button
+            onclick="closeDonationModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <form id="donation-form" class="space-y-6">
+          <!-- Preset Amounts -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-3"
+              >Pilih Nominal</label
+            >
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onclick="selectAmount(50000)"
+                class="amount-btn border-2 border-gray-300 rounded-lg py-3 text-center hover:border-blue-600 hover:bg-blue-50 transition-all"
+              >
+                <span class="text-lg font-bold text-gray-900">Rp 50.000</span>
+              </button>
+              <button
+                type="button"
+                onclick="selectAmount(100000)"
+                class="amount-btn border-2 border-gray-300 rounded-lg py-3 text-center hover:border-blue-600 hover:bg-blue-50 transition-all"
+              >
+                <span class="text-lg font-bold text-gray-900">Rp 100.000</span>
+              </button>
+              <button
+                type="button"
+                onclick="selectAmount(200000)"
+                class="amount-btn border-2 border-gray-300 rounded-lg py-3 text-center hover:border-blue-600 hover:bg-blue-50 transition-all"
+              >
+                <span class="text-lg font-bold text-gray-900">Rp 200.000</span>
+              </button>
+              <button
+                type="button"
+                onclick="selectAmount(500000)"
+                class="amount-btn border-2 border-gray-300 rounded-lg py-3 text-center hover:border-blue-600 hover:bg-blue-50 transition-all"
+              >
+                <span class="text-lg font-bold text-gray-900">Rp 500.000</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Custom Amount -->
+          <div>
+            <label
+              for="custom-amount"
+              class="block text-sm font-medium text-gray-700 mb-2"
+              >Atau Masukkan Nominal Lain</label
+            >
+            <div class="relative">
+              <span
+                class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium"
+                >Rp</span
+              >
+              <input
+                type="number"
+                id="custom-amount"
+                min="1000"
+                step="1000"
+                class="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition-all"
+                placeholder="Masukkan jumlah"
+              />
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Minimum donasi Rp 1.000</p>
+          </div>
+
+          <!-- Message -->
+          <div>
+            <label
+              for="donation-message"
+              class="block text-sm font-medium text-gray-700 mb-2"
+              >Pesan (Optional)</label
+            >
+            <textarea
+              id="donation-message"
+              rows="3"
+              maxlength="500"
+              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 transition-all"
+              placeholder="Tulis pesan dukungan Anda..."
+            ></textarea>
+          </div>
+
+          <!-- Anonymous Option -->
+          <div class="flex items-center">
+            <input
+              id="is-anonymous"
+              type="checkbox"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label for="is-anonymous" class="ml-2 block text-sm text-gray-700">
+              Donasi sebagai anonim
+            </label>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            type="submit"
+            id="submit-donation-btn"
+            class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-lg font-bold text-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg"
+          >
+            <i class="fas fa-heart mr-2"></i>
+            Lanjutkan Pembayaran
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE_URL = "http://localhost:5000/api";
+      let currentCause = null;
+      let selectedAmount = 0;
+
+      // Get cause ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const causeId = urlParams.get("id");
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", async () => {
+        if (!causeId) {
+          showError();
+          return;
+        }
+        await loadCauseDetail();
+      });
+
+      // Load cause detail
+      async function loadCauseDetail() {
+        try {
+          showLoading();
+          const response = await fetch(`${API_BASE_URL}/causes/${causeId}`);
+          const data = await response.json();
+
+          if (!data.success || !data.data) {
+            throw new Error("Cause not found");
+          }
+
+          currentCause = data.data;
+          displayCauseDetail(currentCause);
+          hideLoading();
+        } catch (error) {
+          console.error("Error loading cause:", error);
+          showError();
+        }
+      }
+
+      // Display cause detail
+      function displayCauseDetail(cause) {
+        document.getElementById("breadcrumb-title").textContent = cause.title;
+
+        // Image
+        if (cause.image) {
+          document.getElementById("cause-image").src = cause.image;
+        }
+
+        // Category
+        const categoryIcons = {
+          pendidikan: "fa-graduation-cap",
+          kesehatan: "fa-heartbeat",
+          sosial: "fa-hands-helping",
+          bencana: "fa-house-damage",
+          lingkungan: "fa-leaf",
+          infrastruktur: "fa-building",
+        };
+
+        document.getElementById("category-badge").innerHTML = `
+          <i class="fas ${
+            categoryIcons[cause.category] || "fa-heart"
+          } mr-2"></i>
+          <span>${
+            cause.category.charAt(0).toUpperCase() + cause.category.slice(1)
+          }</span>
+        `;
+
+        document.getElementById("cause-title").textContent = cause.title;
+        document.getElementById("cause-description").textContent =
+          cause.description;
+
+        // Progress
+        const progress = cause.progressPercentage || 0;
+        document.getElementById("progress-percentage").textContent =
+          progress + "%";
+        document.getElementById("progress-bar").style.width =
+          Math.min(progress, 100) + "%";
+
+        document.getElementById("current-amount").textContent =
+          "Rp " + (cause.currentAmount || 0).toLocaleString("id-ID");
+        document.getElementById("target-amount").textContent =
+          "Rp " + (cause.targetAmount || 0).toLocaleString("id-ID");
+        document.getElementById("total-donors").textContent =
+          cause.totalDonors || 0;
+        document.getElementById("days-remaining").textContent =
+          cause.daysRemaining || 0;
+
+        // Progress Updates
+        if (cause.progressUpdates && cause.progressUpdates.length > 0) {
+          const updatesContainer = document.getElementById("updates-container");
+          updatesContainer.innerHTML = cause.progressUpdates
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .map(
+              (update) => `
+              <div class="bg-white rounded-lg p-4 border-l-4 border-blue-500 shadow-sm">
+                <div class="flex items-center mb-2">
+                  <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-info-circle text-blue-600"></i>
+                  </div>
+                  <span class="text-sm text-gray-500 font-medium">
+                    ${new Date(update.date).toLocaleDateString("id-ID", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+                <p class="text-gray-700 leading-relaxed ml-13">${
+                  update.description
+                }</p>
+              </div>
+            `
+            )
+            .join("");
+        }
+
+        document.title = `${cause.title} - DariKita`;
+      }
+
+      // Open donation modal
+      function openDonationModal() {
+        const token = localStorage.getItem("token");
+        const userData = localStorage.getItem("userData");
+
+        if (!token || !userData) {
+          showNotification(
+            "Silakan login terlebih dahulu untuk berdonasi",
+            "info"
+          );
+          setTimeout(() => {
+            window.location.href = `login.html?return=${encodeURIComponent(
+              window.location.href
+            )}`;
+          }, 1500);
+          return;
+        }
+
+        document.getElementById("donation-modal").classList.remove("hidden");
+      }
+
+      function closeDonationModal() {
+        document.getElementById("donation-modal").classList.add("hidden");
+        document.getElementById("donation-form").reset();
+        selectedAmount = 0;
+        document.querySelectorAll(".amount-btn").forEach((btn) => {
+          btn.classList.remove("border-blue-600", "bg-blue-50");
+        });
+      }
+
+      // Select preset amount
+      function selectAmount(amount) {
+        selectedAmount = amount;
+        document.getElementById("custom-amount").value = amount;
+
+        // Update UI
+        document.querySelectorAll(".amount-btn").forEach((btn) => {
+          btn.classList.remove("border-blue-600", "bg-blue-50");
+        });
+        event.target
+          .closest(".amount-btn")
+          .classList.add("border-blue-600", "bg-blue-50");
+      }
+
+      // Handle donation form submit
+      document
+        .getElementById("donation-form")
+        ?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const customAmount =
+            parseInt(document.getElementById("custom-amount").value) || 0;
+          const amount = customAmount || selectedAmount;
+
+          if (!amount || amount < 1000) {
+            showNotification("Minimum donasi adalah Rp 1.000", "error");
+            return;
+          }
+
+          const message = document.getElementById("donation-message").value;
+          const isAnonymous = document.getElementById("is-anonymous").checked;
+
+          await processDonation(amount, message, isAnonymous);
+        });
+
+      // Process donation
+      async function processDonation(amount, message, isAnonymous) {
+        try {
+          const submitBtn = document.getElementById("submit-donation-btn");
+          submitBtn.disabled = true;
+          submitBtn.innerHTML =
+            '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
+
+          const token = localStorage.getItem("token");
+
+          const response = await fetch(`${API_BASE_URL}/donations`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              causeId: causeId,
+              amount: amount,
+              message: message,
+              isAnonymous: isAnonymous,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.message || "Gagal membuat donasi");
+          }
+
+          console.log("✅ Donation created:", data.data);
+
+          // Close modal
+          closeDonationModal();
+
+          // Open Midtrans Snap
+          window.snap.pay(data.data.paymentToken, {
+            onSuccess: function (result) {
+              console.log("Payment success:", result);
+              showSuccessPage(result);
+            },
+            onPending: function (result) {
+              console.log("Payment pending:", result);
+              showNotification(
+                "Pembayaran pending. Silakan selesaikan pembayaran Anda.",
+                "info"
+              );
+              setTimeout(() => (window.location.href = "dashboard.html"), 2000);
+            },
+            onError: function (result) {
+              console.log("Payment error:", result);
+              showNotification("Pembayaran gagal. Silakan coba lagi.", "error");
+            },
+            onClose: function () {
+              console.log("Payment popup closed");
+              showNotification("Pembayaran dibatalkan", "info");
+            },
+          });
+
+          submitBtn.disabled = false;
+          submitBtn.innerHTML =
+            '<i class="fas fa-heart mr-2"></i>Lanjutkan Pembayaran';
+        } catch (error) {
+          console.error("❌ Donation error:", error);
+          showNotification(
+            error.message || "Terjadi kesalahan saat memproses donasi",
+            "error"
+          );
+
+          const submitBtn = document.getElementById("submit-donation-btn");
+          submitBtn.disabled = false;
+          submitBtn.innerHTML =
+            '<i class="fas fa-heart mr-2"></i>Lanjutkan Pembayaran';
+        }
+      }
+
+      // Show success page
+      function showSuccessPage(result) {
+        alert(
+          `Terima kasih! Donasi Anda berhasil.\n\nTransaction ID: ${result.transaction_id}\nOrder ID: ${result.order_id}`
+        );
+        window.location.href = "dashboard.html";
+      }
+
+      // Share functions
+      function shareCause() {
+        if (navigator.share && currentCause) {
+          navigator
+            .share({
+              title: currentCause.title,
+              text: currentCause.description.substring(0, 200) + "...",
+              url: window.location.href,
+            })
+            .catch((err) => console.log("Error sharing:", err));
+        }
+      }
+
+      // UI State Management
+      function showLoading() {
+        document.getElementById("loading-state").classList.remove("hidden");
+        document.getElementById("cause-content").classList.add("hidden");
+        document.getElementById("error-state").classList.add("hidden");
+      }
+
+      function hideLoading() {
+        document.getElementById("loading-state").classList.add("hidden");
+        document.getElementById("cause-content").classList.remove("hidden");
+      }
+
+      function showError() {
+        document.getElementById("loading-state").classList.add("hidden");
+        document.getElementById("cause-content").classList.add("hidden");
+        document.getElementById("error-state").classList.remove("hidden");
+      }
+
+      // Notification
+      function showNotification(message, type = "info") {
+        const existingNotif = document.getElementById("notification-toast");
+        if (existingNotif) existingNotif.remove();
+
+        const notif = document.createElement("div");
+        notif.id = "notification-toast";
+        notif.className = "fixed top-4 right-4 z-50";
+
+        const colors = {
+          success: "bg-green-500",
+          error: "bg-red-500",
+          info: "bg-blue-500",
+        };
+
+        const icons = {
+          success: "fa-check-circle",
+          error: "fa-times-circle",
+          info: "fa-info-circle",
+        };
+
+        notif.innerHTML = `
+          <div class="${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[320px]">
+            <i class="fas ${icons[type]} text-xl"></i>
+            <span class="flex-1">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        `;
+
+        document.body.appendChild(notif);
+        setTimeout(() => notif?.remove(), 5000);
+      }
+    </script>
+  </body>
+</html>

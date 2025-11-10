@@ -120,6 +120,7 @@
           console.log("Already logged in, checking role...");
           try {
             const user = JSON.parse(userData);
+            console.log("User data:", user);
             console.log("User role:", user.role);
 
             // Redirect based on role
@@ -142,6 +143,7 @@
             console.log("Redirecting to auditor dashboard...");
             window.location.href = "auditor.html";
             break;
+          case "donatur":
           default:
             console.log("Redirecting to user dashboard...");
             window.location.href = "dashboard.html";
@@ -193,26 +195,30 @@
             });
 
             const data = await response.json();
-            console.log("📡 Login response:", data);
+            console.log("📡 Full login response:", data);
 
             if (response.ok && data.success) {
-              // PERBAIKAN: Backend mengirim data.data.token dan data.data.user
+              // PERBAIKAN: Akses struktur data yang benar dari backend
               const token = data.data.token;
               const user = data.data.user;
 
+              console.log("🔑 Token:", token ? "✅ Found" : "❌ Missing");
+              console.log("👤 User data:", user);
+              console.log("👤 User role:", user.role);
+
               // Validasi data
-              if (!token || !user) {
-                throw new Error("Invalid response structure");
+              if (!token || !user || !user.role) {
+                throw new Error(
+                  "Invalid response structure - missing token, user, or role"
+                );
               }
 
-              // Save token and user data
+              // Save token and complete user data
               localStorage.setItem("token", token);
               localStorage.setItem("userData", JSON.stringify(user));
 
               console.log("✅ Login successful!");
-              console.log("👤 User data saved:", user);
-              console.log("👤 User role:", user.role);
-              console.log("🔑 Token saved:", token.substring(0, 20) + "...");
+              console.log("💾 Data saved to localStorage");
 
               showNotification(
                 `Login berhasil! Selamat datang, ${user.name}!`,
