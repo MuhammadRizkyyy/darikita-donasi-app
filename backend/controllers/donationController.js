@@ -1,5 +1,6 @@
 const Donation = require("../models/Donation");
 const Cause = require("../models/Cause");
+const User = require("../models/User");
 const midtransClient = require("midtrans-client");
 
 // Initialize Midtrans Snap
@@ -153,10 +154,20 @@ exports.getUserDonations = async (req, res) => {
       .populate("cause", "title category image")
       .sort({ createdAt: -1 });
 
+    // Calculate total stats
+    const totalDonations = donations.length;
+    const totalAmount = donations
+      .filter((d) => d.status === "verified")
+      .reduce((sum, d) => sum + d.amount, 0);
+
     res.json({
       success: true,
       count: donations.length,
       data: donations,
+      stats: {
+        totalDonations,
+        totalAmount,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -181,16 +192,34 @@ exports.verifyDonation = async (req, res) => {
       });
     }
 
+    // Check if already verified
+    if (donation.status === "verified") {
+      return res.status(400).json({
+        success: false,
+        message: "Donation already verified",
+      });
+    }
+
+    // Update donation status
     donation.status = "verified";
     donation.verifiedAt = Date.now();
     donation.verifiedBy = req.user.id;
-
     await donation.save();
 
     // Update cause current amount
     const cause = await Cause.findById(donation.cause);
-    cause.currentAmount += donation.amount;
-    await cause.save();
+    if (cause) {
+      cause.currentAmount += donation.amount;
+      await cause.save();
+    }
+
+    // Update user's total donations and amount
+    const user = await User.findById(donation.user);
+    if (user) {
+      user.totalDonations += 1;
+      user.totalAmount += donation.amount;
+      await user.save();
+    }
 
     res.json({
       success: true,

@@ -1,5 +1,5 @@
 // =====================================================
-// DASHBOARD.JS - Donatur Dashboard Logic
+// DASHBOARD.JS - Donatur Dashboard Logic (Updated)
 // =====================================================
 
 // Check authentication on page load
@@ -56,11 +56,8 @@ async function initializeDashboard() {
     // Setup event listeners
     setupEventListeners();
 
-    // Load user profile
-    await loadUserProfile();
-
-    // Load donation history
-    await loadDonationHistory();
+    // Load user profile and donations together
+    await loadDashboardData();
 
     console.log("✅ Dashboard loaded successfully");
   } catch (error) {
@@ -96,50 +93,57 @@ function setupEventListeners() {
 }
 
 // =====================================================
-// LOAD USER PROFILE
+// LOAD DASHBOARD DATA
 // =====================================================
-async function loadUserProfile() {
+async function loadDashboardData() {
   try {
-    console.log("👤 Loading user profile...");
+    console.log("📊 Loading dashboard data...");
 
-    // Get fresh user data from API
-    const response = await window.API.auth.getMe();
+    // Load user profile
+    const profileResponse = await window.API.auth.getMe();
 
-    if (response.success) {
-      const user = response.data.user;
-      console.log("✅ User profile loaded:", user);
+    // Load donation history (with stats)
+    const donationsResponse = await window.API.donations.getMyDonations();
 
-      // Update localStorage with fresh data
-      const userData = JSON.parse(localStorage.getItem("userData"));
-      const updatedUserData = {
-        ...userData,
-        ...user,
-      };
-      localStorage.setItem("userData", JSON.stringify(updatedUserData));
+    if (profileResponse.success && donationsResponse.success) {
+      const user = profileResponse.data.user;
+      const donations = donationsResponse.data;
+      const stats = donationsResponse.stats || {};
 
-      // Display profile data
-      displayUserProfile(user);
+      console.log("✅ Profile and donations loaded");
+
+      // Display profile with stats from donations
+      displayUserProfile(user, stats);
+
+      // Display donation history
+      displayDonationHistory(donations);
     } else {
-      throw new Error(response.message || "Failed to load profile");
+      throw new Error("Failed to load dashboard data");
     }
   } catch (error) {
-    console.error("❌ Error loading profile:", error);
+    console.error("❌ Error loading dashboard:", error);
 
     // Fallback to localStorage data
     const userData = localStorage.getItem("userData");
     if (userData) {
       const user = JSON.parse(userData);
       displayUserProfile(user);
-    } else {
-      showNotification("Gagal memuat profil", "error");
     }
+
+    // Show empty state for donations
+    const loading = document.getElementById("donations-loading");
+    const empty = document.getElementById("donations-empty");
+    if (loading) loading.classList.add("hidden");
+    if (empty) empty.classList.remove("hidden");
+
+    showNotification("Gagal memuat data dashboard", "error");
   }
 }
 
 // =====================================================
 // DISPLAY USER PROFILE
 // =====================================================
-function displayUserProfile(user) {
+function displayUserProfile(user, stats = {}) {
   // Update header name
   const headerName = document.getElementById("user-name-header");
   if (headerName) {
@@ -154,9 +158,13 @@ function displayUserProfile(user) {
 
   if (nameEl) nameEl.textContent = user.name;
   if (emailEl) emailEl.textContent = user.email;
-  if (totalAmountEl)
-    totalAmountEl.textContent = formatCurrency(user.totalAmount || 0);
-  if (donationCountEl) donationCountEl.textContent = user.totalDonations || 0;
+
+  // Use stats from API or fallback to user data
+  const totalAmount = stats.totalAmount ?? user.totalAmount ?? 0;
+  const totalDonations = stats.totalDonations ?? user.totalDonations ?? 0;
+
+  if (totalAmountEl) totalAmountEl.textContent = formatCurrency(totalAmount);
+  if (donationCountEl) donationCountEl.textContent = totalDonations;
 
   // Show profile content, hide loading
   const loading = document.getElementById("profile-loading");
@@ -166,37 +174,6 @@ function displayUserProfile(user) {
   if (content) content.classList.remove("hidden");
 
   console.log("✅ Profile displayed");
-}
-
-// =====================================================
-// LOAD DONATION HISTORY
-// =====================================================
-async function loadDonationHistory() {
-  try {
-    console.log("💰 Loading donation history...");
-
-    const response = await window.API.donations.getMyDonations();
-
-    if (response.success) {
-      const donations = response.data;
-      console.log(`✅ Loaded ${donations.length} donations`);
-
-      displayDonationHistory(donations);
-    } else {
-      throw new Error(response.message || "Failed to load donations");
-    }
-  } catch (error) {
-    console.error("❌ Error loading donations:", error);
-
-    // Hide loading, show empty state
-    const loading = document.getElementById("donations-loading");
-    const empty = document.getElementById("donations-empty");
-
-    if (loading) loading.classList.add("hidden");
-    if (empty) empty.classList.remove("hidden");
-
-    showNotification("Gagal memuat riwayat donasi", "error");
-  }
 }
 
 // =====================================================
@@ -234,6 +211,8 @@ function displayDonationHistory(donations) {
       list.appendChild(donationCard);
     });
   }
+
+  console.log(`✅ Displayed ${donations.length} donations`);
 }
 
 // =====================================================
@@ -242,7 +221,7 @@ function displayDonationHistory(donations) {
 function createDonationCard(donation, index) {
   const card = document.createElement("div");
   card.className =
-    "bg-gray-50 rounded-xl p-6 border border-gray-200 hover:border-blue-300 transition-all card-hover";
+    "bg-gray-50 rounded-xl p-6 border border-gray-200 hover:border-blue-300 transition-all card-hover fade-in";
   card.style.animationDelay = `${index * 0.1}s`;
 
   // Status badge color
@@ -415,6 +394,7 @@ async function handleDownloadData() {
     // Get donations
     const donationsResponse = await window.API.donations.getMyDonations();
     const donations = donationsResponse.data;
+    const stats = donationsResponse.stats || {};
 
     // Prepare data
     const exportData = {
@@ -422,21 +402,27 @@ async function handleDownloadData() {
         name: user.name,
         email: user.email,
         phone: user.phone || "-",
-        totalDonations: user.totalDonations,
-        totalAmount: user.totalAmount,
+        totalDonations: stats.totalDonations || user.totalDonations || 0,
+        totalAmount: stats.totalAmount || user.totalAmount || 0,
         memberSince: new Date(user.createdAt).toLocaleDateString("id-ID"),
       },
       donations: donations.map((d) => ({
         cause: d.cause?.title || "Program Donasi",
+        category: d.cause?.category || "Umum",
         amount: d.amount,
         status: d.status,
         date: new Date(d.createdAt).toLocaleDateString("id-ID"),
         message: d.message || "-",
         isAnonymous: d.isAnonymous,
+        distributionStatus: d.distributionStatus || "pending",
       })),
       summary: {
-        totalDonations: user.totalDonations,
-        totalAmount: user.totalAmount,
+        totalDonations: stats.totalDonations || donations.length,
+        totalAmount: stats.totalAmount || 0,
+        verifiedDonations: donations.filter((d) => d.status === "verified")
+          .length,
+        pendingDonations: donations.filter((d) => d.status === "pending")
+          .length,
         exportDate: new Date().toLocaleDateString("id-ID"),
       },
     };

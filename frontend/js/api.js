@@ -30,13 +30,24 @@ const removeUserData = () => {
 const apiRequest = async (endpoint, options = {}) => {
   const token = getToken();
 
+  // Build headers properly
+  const headers = {
+    ...options.headers,
+  };
+
+  // Add Authorization header if token exists
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  // Only set Content-Type for JSON if not FormData
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const config = {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
     ...options,
+    headers,
   };
 
   try {
@@ -113,16 +124,24 @@ const causesAPI = {
   },
 
   create: async (causeData) => {
+    // Support both JSON and FormData
+    const isFormData = causeData instanceof FormData;
+
     return await apiRequest("/causes", {
       method: "POST",
-      body: JSON.stringify(causeData),
+      body: isFormData ? causeData : JSON.stringify(causeData),
+      headers: isFormData ? {} : { "Content-Type": "application/json" },
     });
   },
 
   update: async (id, causeData) => {
+    // Support both JSON and FormData
+    const isFormData = causeData instanceof FormData;
+
     return await apiRequest(`/causes/${id}`, {
       method: "PUT",
-      body: JSON.stringify(causeData),
+      body: isFormData ? causeData : JSON.stringify(causeData),
+      headers: isFormData ? {} : { "Content-Type": "application/json" },
     });
   },
 
