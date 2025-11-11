@@ -36,6 +36,12 @@ const causeSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Current amount cannot be negative"],
     },
+    // ✨ NEW: Track total disbursed amount
+    disbursedAmount: {
+      type: Number,
+      default: 0,
+      min: [0, "Disbursed amount cannot be negative"],
+    },
     image: {
       type: String,
       default: "default-cause.jpg",
@@ -92,9 +98,20 @@ causeSchema.virtual("progressPercentage").get(function () {
   return Math.round((this.currentAmount / this.targetAmount) * 100);
 });
 
+// ✨ NEW: Virtual for disbursement percentage
+causeSchema.virtual("disbursementPercentage").get(function () {
+  if (this.currentAmount === 0) return 0;
+  return Math.round((this.disbursedAmount / this.currentAmount) * 100);
+});
+
 // Virtual for remaining amount
 causeSchema.virtual("remainingAmount").get(function () {
   return Math.max(0, this.targetAmount - this.currentAmount);
+});
+
+// ✨ NEW: Virtual for remaining disbursement
+causeSchema.virtual("remainingDisbursement").get(function () {
+  return Math.max(0, this.currentAmount - this.disbursedAmount);
 });
 
 // Virtual for days remaining

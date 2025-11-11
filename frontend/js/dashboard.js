@@ -86,10 +86,13 @@ function setupEventListeners() {
     .getElementById("mobile-menu-btn")
     ?.addEventListener("click", toggleMobileMenu);
 
-  // Download button
+  // Download button (old JSON export)
   document
     .getElementById("download-btn")
     ?.addEventListener("click", handleDownloadData);
+
+  // PDF Report button (NEW) ← TAMBAHKAN INI
+  setupPDFReportListener();
 }
 
 // =====================================================
@@ -569,5 +572,372 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+// =====================================================
+// DOWNLOAD PDF REPORT FUNCTIONALITY
+// =====================================================
+
+// Setup PDF report event listener
+function setupPDFReportListener() {
+  const downloadBtn = document.getElementById("download-report-btn");
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", handleDownloadPDFReport);
+    console.log("✅ PDF report button listener added");
+  }
+}
+
+// Call this function in setupEventListeners()
+// Add this line to the setupEventListeners() function:
+// setupPDFReportListener();
+
+// Handle download PDF report
+async function handleDownloadPDFReport() {
+  try {
+    showLoading("Menggenerate laporan PDF...");
+    console.log("📄 Generating PDF report...");
+
+    // Get date filters
+    const startDate = document.getElementById("report-start-date").value;
+    const endDate = document.getElementById("report-end-date").value;
+
+    // Get user profile
+    const profileResponse = await window.API.auth.getMe();
+    const user = profileResponse.data.user;
+
+    // Get donations
+    const donationsResponse = await window.API.donations.getMyDonations();
+    let donations = donationsResponse.data || [];
+
+    // Filter donations by date if provided
+    if (startDate || endDate) {
+      donations = donations.filter((d) => {
+        const donationDate = new Date(d.createdAt);
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
+        if (start && end) {
+          return donationDate >= start && donationDate <= end;
+        } else if (start) {
+          return donationDate >= start;
+        } else if (end) {
+          return donationDate <= end;
+        }
+        return true;
+      });
+    }
+
+    // Only show verified donations in report
+    const verifiedDonations = donations.filter(
+      (d) => d.status === "verified" || d.status === "pending"
+    );
+
+    if (verifiedDonations.length === 0) {
+      hideLoading();
+      showNotification(
+        "Tidak ada donasi untuk periode yang dipilih",
+        "warning"
+      );
+      return;
+    }
+
+    // Calculate totals
+    const totalAmount = verifiedDonations.reduce((sum, d) => sum + d.amount, 0);
+    const totalTransactions = verifiedDonations.length;
+
+    // Prepare report data
+    const reportData = {
+      user: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone || "-",
+      },
+      summary: {
+        totalTransactions,
+        totalAmount,
+      },
+      donations: verifiedDonations.map((d) => ({
+        _id: d._id,
+        date: d.createdAt,
+        program: d.cause?.title || "Program Donasi",
+        category: d.cause?.category || "umum",
+        amount: d.amount,
+        status: d.distributionStatus || "pending",
+      })),
+      filters: {
+        startDate: startDate || null,
+        endDate: endDate || null,
+      },
+    };
+
+    // Generate PDF
+    generateDonorPDFReport(reportData);
+
+    hideLoading();
+    showNotification("Laporan PDF berhasil didownload!", "success");
+    console.log("✅ PDF report generated successfully");
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error generating PDF report:", error);
+    showNotification("Gagal menggenerate laporan PDF", "error");
+  }
+}
+
+// Generate Donor PDF Report
+function generateDonorPDFReport(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Colors
+  const primaryColor = [30, 64, 175]; // Blue-800
+  const secondaryColor = [59, 130, 246]; // Blue-500
+  const headerBg = [219, 234, 254]; // Blue-100
+
+  // Page dimensions
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+
+  // ===== HEADER =====
+  // Logo/Icon area
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.roundedRect(margin, margin, 15, 15, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.text("❤", margin + 4.5, margin + 11);
+
+  // Title
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFontSize(20);
+  doc.setFont(undefined, "bold");
+  doc.text("DARIKITA", margin + 18, margin + 8);
+
+  // Subtitle
+  doc.setFontSize(10);
+  doc.setFont(undefined, "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text("Platform Donasi Digital", margin + 18, margin + 13);
+
+  // Report title
+  doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+  doc.rect(margin, margin + 20, pageWidth - 2 * margin, 25, "F");
+
+  doc.setFontSize(16);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("LAPORAN DONASI PRIBADI – DARIKITA", margin + 5, margin + 28);
+
+  let yPos = margin + 36;
+
+  // ===== DONOR INFO =====
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Nama Donatur  : ${data.user.name}`, margin + 5, yPos);
+
+  yPos += 6;
+  doc.text(`Email Donatur  : ${data.user.email}`, margin + 5, yPos);
+
+  yPos += 6;
+  const currentDate = new Date().toLocaleDateString("id-ID", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  doc.text(`Tanggal Laporan: ${currentDate}`, margin + 5, yPos);
+
+  // Add period info if filters applied
+  if (data.filters.startDate || data.filters.endDate) {
+    yPos += 6;
+    const startStr = data.filters.startDate
+      ? new Date(data.filters.startDate).toLocaleDateString("id-ID")
+      : "-";
+    const endStr = data.filters.endDate
+      ? new Date(data.filters.endDate).toLocaleDateString("id-ID")
+      : "-";
+    doc.text(`Periode: ${startStr} s.d ${endStr}`, margin + 5, yPos);
+  }
+
+  yPos += 12;
+
+  // ===== SUMMARY BOX =====
+  doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 20, 2, 2, "F");
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("RINGKASAN DONASI:", margin + 5, yPos + 7);
+
+  yPos += 13;
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+
+  // Convert number to words for Indonesian (simple version)
+  const numberWords = convertNumberToWords(data.summary.totalTransactions);
+  doc.text(
+    `Jumlah Transaksi: ${data.summary.totalTransactions} (${numberWords})`,
+    margin + 5,
+    yPos
+  );
+
+  const totalFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 2,
+  }).format(data.summary.totalAmount);
+
+  doc.text(`Total Donasi: ${totalFormatted}`, margin + 100, yPos);
+
+  yPos += 12;
+
+  // ===== DONATIONS TABLE =====
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("RIWAYAT DETAIL DONASI:", margin, yPos);
+
+  yPos += 8;
+
+  // Table data
+  const tableData = data.donations.map((d, index) => [
+    (index + 1).toString(),
+    new Date(d.date).toLocaleDateString("id-ID"),
+    d.program,
+    capitalizeFirstLetter(d.category),
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 2,
+    }).format(d.amount),
+    d.status === "distributed" ? "Sudah\nDisalurkan" : "Belum\nDisalurkan",
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    head: [
+      ["No", "Tanggal\nDonasi", "Program", "Kategori", "Jumlah", "Status"],
+    ],
+    body: tableData,
+    theme: "striped",
+    headStyles: {
+      fillColor: [30, 64, 175],
+      textColor: [255, 255, 255],
+      fontSize: 9,
+      fontStyle: "bold",
+      halign: "center",
+    },
+    bodyStyles: {
+      fontSize: 8,
+      textColor: [0, 0, 0],
+    },
+    alternateRowStyles: {
+      fillColor: [245, 247, 250],
+    },
+    columnStyles: {
+      0: { halign: "center", cellWidth: 10 },
+      1: { halign: "center", cellWidth: 25 },
+      2: { halign: "left", cellWidth: 50 },
+      3: { halign: "center", cellWidth: 25 },
+      4: { halign: "right", cellWidth: 35 },
+      5: { halign: "center", cellWidth: 30 },
+    },
+    margin: { left: margin, right: margin },
+  });
+
+  // ===== FOOTER =====
+  const finalY = doc.lastAutoTable.finalY + 10;
+
+  if (finalY < pageHeight - 30) {
+    doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+    doc.rect(margin, finalY, pageWidth - 2 * margin, 20, "F");
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, "italic");
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    const footerText =
+      "Terima kasih atas kontribusi Anda untuk membantu sesama!";
+    doc.text(footerText, pageWidth / 2, finalY + 8, { align: "center" });
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, "bold");
+    const footerText2 =
+      "Platform DariKita - Lebih Dekat, Lebih Tepat, Lebih Bermanfaat";
+    doc.text(footerText2, pageWidth / 2, finalY + 14, { align: "center" });
+  }
+
+  // Save PDF
+  const fileName = `Laporan_Donasi_${data.user.name.replace(/\s+/g, "_")}_${
+    new Date().toISOString().split("T")[0]
+  }.pdf`;
+  doc.save(fileName);
+}
+
+// =====================================================
+// HELPER FUNCTIONS
+// =====================================================
+
+// Convert number to Indonesian words (1-10)
+function convertNumberToWords(num) {
+  const words = [
+    "",
+    "Satu",
+    "Dua",
+    "Tiga",
+    "Empat",
+    "Lima",
+    "Enam",
+    "Tujuh",
+    "Delapan",
+    "Sembilan",
+    "Sepuluh",
+  ];
+
+  if (num <= 10) {
+    return words[num];
+  } else if (num < 20) {
+    return words[num - 10] + " Belas";
+  } else if (num < 100) {
+    const tens = Math.floor(num / 10);
+    const ones = num % 10;
+    return words[tens] + " Puluh" + (ones > 0 ? " " + words[ones] : "");
+  } else if (num < 1000) {
+    const hundreds = Math.floor(num / 100);
+    const remainder = num % 100;
+    return (
+      (hundreds === 1 ? "Seratus" : words[hundreds] + " Ratus") +
+      (remainder > 0 ? " " + convertNumberToWords(remainder) : "")
+    );
+  } else {
+    return num.toString(); // Fallback for large numbers
+  }
+}
+
+// Capitalize first letter
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+// =====================================================
+// UPDATE setupEventListeners() FUNCTION
+// =====================================================
+// IMPORTANT: Add this line to the existing setupEventListeners() function:
+// setupPDFReportListener();
+//
+// The setupEventListeners() function should now look like this:
+//
+// function setupEventListeners() {
+//   // Logout buttons
+//   document.getElementById("logout-btn")?.addEventListener("click", handleLogout);
+//   document.getElementById("logout-btn-mobile")?.addEventListener("click", handleLogout);
+//
+//   // Mobile menu toggle
+//   document.getElementById("mobile-menu-btn")?.addEventListener("click", toggleMobileMenu);
+//
+//   // Download button (old JSON export)
+//   document.getElementById("download-btn")?.addEventListener("click", handleDownloadData);
+//
+//   // PDF Report button (NEW)
+//   setupPDFReportListener();
+// }
 
 console.log("✅ Dashboard.js loaded successfully");

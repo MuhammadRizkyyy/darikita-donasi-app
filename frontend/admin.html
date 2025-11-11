@@ -167,6 +167,14 @@
               Laporan
             </a>
             <a
+              href="#transparency"
+              data-section="transparency"
+              class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <i class="fas fa-receipt mr-3 w-5"></i>
+              Laporan Transparansi
+            </a>
+            <a
               href="#users"
               data-section="users"
               class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
@@ -401,72 +409,254 @@
               Laporan Transparansi
             </h1>
             <p class="text-gray-600">
-              Upload bukti penyaluran dan generate laporan
+              Generate dan download laporan donasi dalam format PDF
             </p>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <!-- Report Type Cards -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Donor Report Card -->
             <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
-              <div
-                class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4"
-              >
-                <i class="fas fa-file-export text-blue-600 text-xl"></i>
+              <div class="flex items-center mb-4">
+                <div
+                  class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4"
+                >
+                  <i class="fas fa-user-circle text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-gray-900">
+                    Laporan Per Donatur
+                  </h3>
+                  <p class="text-sm text-gray-600">
+                    Download laporan individual donatur
+                  </p>
+                </div>
               </div>
-              <h3 class="text-lg font-bold text-gray-900 mb-2">Export Excel</h3>
-              <p class="text-sm text-gray-600 mb-4">
-                Download laporan donasi dalam format Excel
-              </p>
-              <button
-                class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <i class="fas fa-download mr-2"></i>Download
-              </button>
+
+              <!-- Donor Report Form -->
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Pilih Donatur
+                  </label>
+                  <select
+                    id="select-donor"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">-- Pilih Donatur --</option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      class="block text-sm font-semibold text-gray-700 mb-2"
+                    >
+                      Dari Tanggal
+                    </label>
+                    <input
+                      type="date"
+                      id="donor-start-date"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="block text-sm font-semibold text-gray-700 mb-2"
+                    >
+                      Sampai Tanggal
+                    </label>
+                    <input
+                      type="date"
+                      id="donor-end-date"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  id="btn-download-donor-report"
+                  class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  <i class="fas fa-file-pdf mr-2"></i>Download Laporan Donatur
+                </button>
+              </div>
             </div>
 
+            <!-- All Donations Report Card -->
             <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
-              <div
-                class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4"
-              >
-                <i class="fas fa-file-pdf text-red-600 text-xl"></i>
+              <div class="flex items-center mb-4">
+                <div
+                  class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4"
+                >
+                  <i class="fas fa-file-invoice text-green-600 text-xl"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-gray-900">
+                    Laporan Semua Donasi
+                  </h3>
+                  <p class="text-sm text-gray-600">
+                    Download laporan keseluruhan donasi
+                  </p>
+                </div>
               </div>
-              <h3 class="text-lg font-bold text-gray-900 mb-2">Export PDF</h3>
-              <p class="text-sm text-gray-600 mb-4">
-                Download laporan donasi dalam format PDF
-              </p>
+
+              <!-- All Donations Report Form -->
+              <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      class="block text-sm font-semibold text-gray-700 mb-2"
+                    >
+                      Dari Tanggal
+                    </label>
+                    <input
+                      type="date"
+                      id="all-start-date"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="block text-sm font-semibold text-gray-700 mb-2"
+                    >
+                      Sampai Tanggal
+                    </label>
+                    <input
+                      type="date"
+                      id="all-end-date"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Filter Program (Opsional)
+                  </label>
+                  <select
+                    id="select-cause-filter"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">-- Semua Program --</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Status Penyaluran
+                  </label>
+                  <select
+                    id="select-distribution-status"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">Semua Status</option>
+                    <option value="pending">Belum Disalurkan</option>
+                    <option value="distributed">Sudah Disalurkan</option>
+                  </select>
+                </div>
+
+                <button
+                  id="btn-download-all-report"
+                  class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  <i class="fas fa-file-pdf mr-2"></i>Download Laporan Semua
+                  Donasi
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Export Options -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">
+              <i class="fas fa-download mr-2 text-gray-600"></i>
+              Export Options
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
-                class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors"
+                id="btn-export-excel"
+                class="flex items-center justify-center px-6 py-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50 transition-colors group"
               >
-                <i class="fas fa-download mr-2"></i>Download
+                <i
+                  class="fas fa-file-excel text-green-600 text-2xl mr-3 group-hover:scale-110 transition-transform"
+                ></i>
+                <div class="text-left">
+                  <div class="font-semibold text-gray-900">Export Excel</div>
+                  <div class="text-xs text-gray-500">Format .xlsx</div>
+                </div>
+              </button>
+
+              <button
+                id="btn-export-csv"
+                class="flex items-center justify-center px-6 py-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50 transition-colors group"
+              >
+                <i
+                  class="fas fa-file-csv text-blue-600 text-2xl mr-3 group-hover:scale-110 transition-transform"
+                ></i>
+                <div class="text-left">
+                  <div class="font-semibold text-gray-900">Export CSV</div>
+                  <div class="text-xs text-gray-500">Format .csv</div>
+                </div>
+              </button>
+
+              <button
+                id="btn-view-report-history"
+                class="flex items-center justify-center px-6 py-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50 transition-colors group"
+              >
+                <i
+                  class="fas fa-history text-purple-600 text-2xl mr-3 group-hover:scale-110 transition-transform"
+                ></i>
+                <div class="text-left">
+                  <div class="font-semibold text-gray-900">Riwayat Laporan</div>
+                  <div class="text-xs text-gray-500">View history</div>
+                </div>
               </button>
             </div>
+          </div>
+        </section>
 
-            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
-              <div
-                class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4"
-              >
-                <i class="fas fa-chart-line text-green-600 text-xl"></i>
-              </div>
-              <h3 class="text-lg font-bold text-gray-900 mb-2">Statistik</h3>
-              <p class="text-sm text-gray-600 mb-4">
-                Lihat statistik lengkap donasi
+        <section id="section-transparency" class="section-content hidden">
+          <div class="mb-8 flex items-center justify-between">
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                Laporan Transparansi
+              </h1>
+              <p class="text-gray-600">
+                Kelola laporan penyaluran dana per program
               </p>
-              <button
-                class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors"
+            </div>
+          </div>
+
+          <!-- Filter & Search -->
+          <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <select
+                id="filter-transparency-cause"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                <i class="fas fa-eye mr-2"></i>Lihat
+                <option value="">Semua Program</option>
+              </select>
+              <select
+                id="filter-transparency-status"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Semua Status</option>
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+              <button
+                id="btn-filter-transparency"
+                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <i class="fas fa-filter mr-2"></i>Filter
               </button>
             </div>
           </div>
 
-          <div class="bg-white rounded-xl shadow-lg p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-6">
-              Upload Bukti Penyaluran
-            </h2>
-            <div id="reports-list" class="space-y-4">
-              <p class="text-gray-500 text-center py-8">
-                Pilih program untuk upload bukti penyaluran
-              </p>
-            </div>
+          <!-- Reports by Cause -->
+          <div id="transparency-causes-list" class="space-y-6">
+            <div class="skeleton h-48 rounded-xl"></div>
           </div>
         </section>
 
@@ -507,6 +697,236 @@
         <p class="mt-4 text-gray-700 font-medium text-lg">Loading...</p>
       </div>
     </div>
+
+    <!-- ========================================= -->
+    <!-- MODAL: Create/Edit Transparency Report -->
+    <!-- ========================================= -->
+    <div
+      id="transparency-modal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+      >
+        <!-- Modal Header -->
+        <div
+          class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl z-10"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <h2
+                id="transparency-modal-title"
+                class="text-2xl font-bold text-gray-900"
+              >
+                Buat Laporan Penyaluran
+              </h2>
+              <p
+                id="transparency-modal-subtitle"
+                class="text-sm text-gray-600 mt-1"
+              >
+                Program:
+                <span class="font-semibold" id="transparency-cause-name"
+                  >-</span
+                >
+              </p>
+            </div>
+            <button
+              onclick="closeTransparencyModal()"
+              class="text-gray-400 hover:text-gray-600"
+            >
+              <i class="fas fa-times text-2xl"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Body -->
+        <form id="transparency-form" class="p-6 space-y-6">
+          <input type="hidden" id="transparency-cause-id" />
+          <input type="hidden" id="transparency-report-id" />
+
+          <!-- Sisa Dana Info -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-700">
+                  Sisa Dana yang Belum Disalurkan:
+                </p>
+                <p
+                  id="remaining-funds"
+                  class="text-2xl font-bold text-blue-600"
+                >
+                  Rp 0
+                </p>
+              </div>
+              <i class="fas fa-wallet text-blue-400 text-3xl"></i>
+            </div>
+          </div>
+
+          <!-- Date -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Tanggal Penyaluran <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              id="transparency-date"
+              required
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <!-- Amount -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Jumlah Dana Disalurkan (Rp) <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              id="transparency-amount"
+              required
+              min="1000"
+              step="1000"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Contoh: 5000000"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Maksimal: <span id="max-amount-text">Rp 0</span>
+            </p>
+          </div>
+
+          <!-- Description -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Deskripsi Kegiatan <span class="text-red-500">*</span>
+            </label>
+            <textarea
+              id="transparency-description"
+              required
+              rows="5"
+              maxlength="2000"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder="Jelaskan detail penggunaan dana, kegiatan yang dilakukan, dan hasil yang dicapai..."
+            ></textarea>
+            <p class="text-sm text-gray-500 mt-1">
+              <span id="transparency-desc-count">0</span>/2000 karakter
+            </p>
+          </div>
+
+          <!-- Photos Upload -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Foto Kegiatan
+              <span class="text-gray-500 text-xs">(Maks. 10 foto)</span>
+            </label>
+            <div
+              class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors cursor-pointer"
+              onclick="document.getElementById('transparency-photos').click()"
+            >
+              <div class="text-center">
+                <i class="fas fa-images text-gray-400 text-4xl mb-2"></i>
+                <p class="text-sm text-gray-600">
+                  Klik untuk upload foto kegiatan
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                  JPG, PNG, WEBP (Maks. 5MB per file)
+                </p>
+              </div>
+            </div>
+            <input
+              type="file"
+              id="transparency-photos"
+              multiple
+              accept="image/*"
+              class="hidden"
+              onchange="handleTransparencyPhotos(event)"
+            />
+            <div id="photos-preview" class="grid grid-cols-3 gap-3 mt-3"></div>
+          </div>
+
+          <!-- Documents Upload -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Dokumen Pendukung
+              <span class="text-gray-500 text-xs">(Nota, Kuitansi, dll)</span>
+            </label>
+            <div
+              class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors cursor-pointer"
+              onclick="document.getElementById('transparency-documents').click()"
+            >
+              <div class="text-center">
+                <i class="fas fa-file-pdf text-gray-400 text-4xl mb-2"></i>
+                <p class="text-sm text-gray-600">Klik untuk upload dokumen</p>
+                <p class="text-xs text-gray-500 mt-1">
+                  PDF, JPG, PNG (Maks. 10MB per file)
+                </p>
+              </div>
+            </div>
+            <input
+              type="file"
+              id="transparency-documents"
+              multiple
+              accept=".pdf,image/*"
+              class="hidden"
+              onchange="handleTransparencyDocuments(event)"
+            />
+            <div id="documents-preview" class="space-y-2 mt-3"></div>
+          </div>
+
+          <!-- Status -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Status Publikasi
+            </label>
+            <div class="flex items-center space-x-6">
+              <label class="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="transparency-status"
+                  value="draft"
+                  checked
+                  class="mr-2 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="text-gray-700"
+                  >Draft (belum tampil ke publik)</span
+                >
+              </label>
+              <label class="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="transparency-status"
+                  value="published"
+                  class="mr-2 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="text-gray-700">Publish (tampil ke publik)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex space-x-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onclick="closeTransparencyModal()"
+              class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              id="transparency-submit-btn"
+              class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              <i class="fas fa-save mr-2"></i>
+              <span id="transparency-submit-text">Simpan Laporan</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- jsPDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <!-- Include API and Admin Scripts -->
     <script src="js/api.js"></script>

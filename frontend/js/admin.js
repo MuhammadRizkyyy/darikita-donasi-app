@@ -2,16 +2,21 @@
 // ADMIN.JS - Admin Dashboard Logic with CRUD Modal
 // =====================================================
 
-// Global state for modal
+// Global state for cause modal
 let currentEditingCauseId = null;
 let selectedImageFile = null;
 let imagePreviewUrl = null;
+
+// Global state for transparency
+let currentEditingReportId = null;
+let selectedPhotos = [];
+let selectedDocuments = [];
+let currentCauseForReport = null;
 
 // Check authentication on page load
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Dashboard initialized");
 
-  // Check if user is logged in
   const token = localStorage.getItem("token");
   const userData = localStorage.getItem("userData");
 
@@ -27,7 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const user = JSON.parse(userData);
 
-    // Check if user is admin
     if (user.role !== "admin") {
       console.log("⚠️ Access denied. User role:", user.role);
       showNotification(
@@ -41,8 +45,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     console.log("✅ Admin authenticated:", user.name);
-
-    // Initialize admin dashboard
     await initializeAdminDashboard(user);
   } catch (error) {
     console.error("❌ Error parsing user data:", error);
@@ -56,19 +58,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 // =====================================================
 async function initializeAdminDashboard(user) {
   try {
-    // Display admin name
     const adminNameEl = document.getElementById("admin-name");
     if (adminNameEl) {
       adminNameEl.textContent = user.name;
     }
 
-    // Setup event listeners
     setupEventListeners();
-
-    // Create modal
     createCauseModal();
-
-    // Load dashboard data
     await loadDashboardStats();
     await loadRecentActivities();
 
@@ -80,13 +76,44 @@ async function initializeAdminDashboard(user) {
 }
 
 // =====================================================
+// SETUP EVENT LISTENERS
+// =====================================================
+function setupEventListeners() {
+  document
+    .getElementById("logout-btn")
+    ?.addEventListener("click", handleLogout);
+
+  document
+    .getElementById("sidebar-toggle")
+    ?.addEventListener("click", toggleSidebar);
+  document
+    .getElementById("sidebar-overlay")
+    ?.addEventListener("click", toggleSidebar);
+
+  document.querySelectorAll(".nav-link").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const section = link.dataset.section;
+      navigateToSection(section);
+    });
+  });
+
+  document
+    .getElementById("btn-create-cause")
+    ?.addEventListener("click", showCreateCauseModal);
+
+  document
+    .getElementById("btn-filter-donations")
+    ?.addEventListener("click", filterDonations);
+}
+
+// =====================================================
 // CREATE CAUSE MODAL
 // =====================================================
 function createCauseModal() {
   const modalHTML = `
     <div id="cause-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <!-- Modal Header -->
         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
           <div class="flex items-center justify-between">
             <h2 id="modal-title" class="text-2xl font-bold text-gray-900">Buat Program Baru</h2>
@@ -96,9 +123,7 @@ function createCauseModal() {
           </div>
         </div>
 
-        <!-- Modal Body -->
         <form id="cause-form" class="p-6 space-y-6">
-          <!-- Title -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">
               Judul Program <span class="text-red-500">*</span>
@@ -106,24 +131,21 @@ function createCauseModal() {
             <input 
               type="text" 
               id="cause-title" 
-              name="title"
               required
               maxlength="100"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="Contoh: Bantu Anak Yatim Untuk Sekolah"
             />
           </div>
 
-          <!-- Category -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">
               Kategori <span class="text-red-500">*</span>
             </label>
             <select 
               id="cause-category" 
-              name="category"
               required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Pilih Kategori</option>
               <option value="pendidikan">Pendidikan</option>
@@ -136,18 +158,16 @@ function createCauseModal() {
             </select>
           </div>
 
-          <!-- Description -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">
               Deskripsi <span class="text-red-500">*</span>
             </label>
             <textarea 
               id="cause-description" 
-              name="description"
               required
               maxlength="2000"
               rows="5"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Jelaskan detail program donasi..."
             ></textarea>
             <p class="text-sm text-gray-500 mt-1">
@@ -155,7 +175,6 @@ function createCauseModal() {
             </p>
           </div>
 
-          <!-- Target Amount & Deadline -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -164,11 +183,10 @@ function createCauseModal() {
               <input 
                 type="number" 
                 id="cause-target" 
-                name="targetAmount"
                 required
                 min="100000"
                 step="10000"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="10000000"
               />
             </div>
@@ -179,20 +197,17 @@ function createCauseModal() {
               <input 
                 type="date" 
                 id="cause-deadline" 
-                name="deadline"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          <!-- Image Upload -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">
               Gambar Program <span class="text-red-500">*</span>
             </label>
             <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
-              <!-- Preview Area -->
               <div id="image-preview-container" class="hidden mb-4">
                 <div class="relative">
                   <img 
@@ -211,7 +226,6 @@ function createCauseModal() {
                 </div>
               </div>
 
-              <!-- Upload Button -->
               <div id="upload-placeholder" class="text-center">
                 <i class="fas fa-cloud-upload-alt text-gray-400 text-5xl mb-3"></i>
                 <p class="text-gray-600 mb-2">
@@ -224,7 +238,6 @@ function createCauseModal() {
               <input 
                 type="file" 
                 id="cause-image" 
-                name="image"
                 accept="image/png,image/jpeg,image/jpg,image/webp"
                 class="hidden"
                 onchange="handleImageSelect(event)"
@@ -232,7 +245,6 @@ function createCauseModal() {
             </div>
           </div>
 
-          <!-- Form Actions -->
           <div class="flex space-x-3 pt-4 border-t border-gray-200">
             <button 
               type="button"
@@ -256,19 +268,16 @@ function createCauseModal() {
 
   document.body.insertAdjacentHTML("beforeend", modalHTML);
 
-  // Setup form submit handler
   document
     .getElementById("cause-form")
     .addEventListener("submit", handleCauseSubmit);
 
-  // Setup description character counter
   document
     .getElementById("cause-description")
     .addEventListener("input", (e) => {
       document.getElementById("desc-count").textContent = e.target.value.length;
     });
 
-  // Make upload placeholder clickable
   document
     .getElementById("upload-placeholder")
     .addEventListener("click", () => {
@@ -277,28 +286,24 @@ function createCauseModal() {
 }
 
 // =====================================================
-// MODAL FUNCTIONS
+// CAUSE MODAL FUNCTIONS
 // =====================================================
 function showCreateCauseModal() {
   currentEditingCauseId = null;
   selectedImageFile = null;
   imagePreviewUrl = null;
 
-  // Reset form
   document.getElementById("cause-form").reset();
   document.getElementById("modal-title").textContent = "Buat Program Baru";
   document.getElementById("submit-btn-text").textContent = "Simpan Program";
   document.getElementById("desc-count").textContent = "0";
 
-  // Reset image preview
   document.getElementById("image-preview-container").classList.add("hidden");
   document.getElementById("upload-placeholder").classList.remove("hidden");
 
-  // Set minimum date to today
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("cause-deadline").setAttribute("min", today);
 
-  // Show modal
   document.getElementById("cause-modal").classList.remove("hidden");
 }
 
@@ -312,14 +317,11 @@ function closeCauseModal() {
 async function showEditCauseModal(causeId) {
   try {
     showLoading();
-    console.log("📝 Loading cause for edit:", causeId);
-
     const response = await window.API.causes.getById(causeId);
     const cause = response.data;
 
     currentEditingCauseId = causeId;
 
-    // Fill form with cause data
     document.getElementById("cause-title").value = cause.title;
     document.getElementById("cause-category").value = cause.category;
     document.getElementById("cause-description").value = cause.description;
@@ -327,11 +329,9 @@ async function showEditCauseModal(causeId) {
     document.getElementById("desc-count").textContent =
       cause.description.length;
 
-    // Format date for input
     const deadline = new Date(cause.deadline).toISOString().split("T")[0];
     document.getElementById("cause-deadline").value = deadline;
 
-    // Show existing image
     if (cause.image) {
       imagePreviewUrl = cause.image;
       document.getElementById("image-preview").src = cause.image;
@@ -341,11 +341,9 @@ async function showEditCauseModal(causeId) {
       document.getElementById("upload-placeholder").classList.add("hidden");
     }
 
-    // Update modal title
     document.getElementById("modal-title").textContent = "Edit Program";
     document.getElementById("submit-btn-text").textContent = "Update Program";
 
-    // Show modal
     document.getElementById("cause-modal").classList.remove("hidden");
 
     hideLoading();
@@ -356,22 +354,17 @@ async function showEditCauseModal(causeId) {
   }
 }
 
-// =====================================================
-// IMAGE HANDLING
-// =====================================================
 function handleImageSelect(event) {
   const file = event.target.files[0];
 
   if (!file) return;
 
-  // Validate file size (5MB)
   if (file.size > 5 * 1024 * 1024) {
     showNotification("Ukuran file maksimal 5MB", "error");
     event.target.value = "";
     return;
   }
 
-  // Validate file type
   const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
   if (!validTypes.includes(file.type)) {
     showNotification("Format file harus PNG, JPG, atau WEBP", "error");
@@ -381,7 +374,6 @@ function handleImageSelect(event) {
 
   selectedImageFile = file;
 
-  // Create preview
   const reader = new FileReader();
   reader.onload = (e) => {
     imagePreviewUrl = e.target.result;
@@ -402,9 +394,6 @@ function removeImage() {
   document.getElementById("upload-placeholder").classList.remove("hidden");
 }
 
-// =====================================================
-// FORM SUBMIT HANDLER
-// =====================================================
 async function handleCauseSubmit(event) {
   event.preventDefault();
 
@@ -430,33 +419,24 @@ async function handleCauseSubmit(event) {
       document.getElementById("cause-deadline").value
     );
 
-    // Add image if selected
     if (selectedImageFile) {
       formData.append("image", selectedImageFile);
     } else if (currentEditingCauseId && imagePreviewUrl) {
-      // Keep existing image URL when editing
       formData.append("image", imagePreviewUrl);
     }
 
     let response;
     if (currentEditingCauseId) {
-      // Update existing cause
-      console.log("📝 Updating cause:", currentEditingCauseId);
       response = await window.API.causes.update(
         currentEditingCauseId,
         formData
       );
       showNotification("Program berhasil diupdate!", "success");
     } else {
-      // Create new cause
-      console.log("✨ Creating new cause");
       response = await window.API.causes.create(formData);
       showNotification("Program berhasil dibuat!", "success");
     }
 
-    console.log("✅ Cause saved:", response.data);
-
-    // Close modal and reload causes
     closeCauseModal();
     await loadCauses();
     await loadDashboardStats();
@@ -471,111 +451,53 @@ async function handleCauseSubmit(event) {
 }
 
 // =====================================================
-// SETUP EVENT LISTENERS
-// =====================================================
-function setupEventListeners() {
-  // Logout button
-  document
-    .getElementById("logout-btn")
-    ?.addEventListener("click", handleLogout);
-
-  // Sidebar toggle (mobile)
-  document
-    .getElementById("sidebar-toggle")
-    ?.addEventListener("click", toggleSidebar);
-  document
-    .getElementById("sidebar-overlay")
-    ?.addEventListener("click", toggleSidebar);
-
-  // Navigation links
-  document.querySelectorAll(".nav-link").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const section = link.dataset.section;
-      navigateToSection(section);
-    });
-  });
-
-  // Create cause button
-  document
-    .getElementById("btn-create-cause")
-    ?.addEventListener("click", showCreateCauseModal);
-
-  // Filter donations
-  document
-    .getElementById("btn-filter-donations")
-    ?.addEventListener("click", filterDonations);
-}
-
-// =====================================================
-// LOAD DASHBOARD STATS
+// DASHBOARD STATS
 // =====================================================
 async function loadDashboardStats() {
   try {
-    console.log("📊 Loading dashboard statistics...");
-
-    // Get all causes
     const causesResponse = await window.API.causes.getAll();
     const causes = causesResponse.data || [];
     const activeCauses = causes.filter((c) => c.status === "active").length;
 
-    // Get all donations
     const donationsResponse = await window.API.admin.getAllDonations();
     const donations = donationsResponse.data || [];
     const verifiedDonations = donations.filter(
       (d) => d.status === "verified"
     ).length;
 
-    // Calculate total donations amount
     const totalAmount = donations
       .filter((d) => d.status === "verified")
       .reduce((sum, d) => sum + d.amount, 0);
 
-    // Get all users
     const usersResponse = await window.API.admin.getAllUsers();
     const users = usersResponse.data || [];
 
-    // Update stats
     document.getElementById("stat-total-donations").textContent =
       formatCurrency(totalAmount);
     document.getElementById("stat-active-causes").textContent = activeCauses;
     document.getElementById("stat-verified-donations").textContent =
       verifiedDonations;
     document.getElementById("stat-total-users").textContent = users.length;
-
-    console.log("✅ Statistics loaded");
   } catch (error) {
     console.error("❌ Error loading stats:", error);
     showNotification("Gagal memuat statistik", "error");
   }
 }
 
-// =====================================================
-// LOAD RECENT ACTIVITIES
-// =====================================================
 async function loadRecentActivities() {
   try {
-    console.log("📋 Loading recent activities...");
-
-    // Load recent donations
     const donationsResponse = await window.API.admin.getAllDonations();
     const donations = (donationsResponse.data || []).slice(0, 5);
     displayRecentDonations(donations);
 
-    // Load recent causes
     const causesResponse = await window.API.causes.getAll();
     const causes = (causesResponse.data || []).slice(0, 5);
     displayRecentCauses(causes);
-
-    console.log("✅ Recent activities loaded");
   } catch (error) {
     console.error("❌ Error loading activities:", error);
   }
 }
 
-// =====================================================
-// DISPLAY RECENT DONATIONS
-// =====================================================
 function displayRecentDonations(donations) {
   const container = document.getElementById("recent-donations");
   if (!container) return;
@@ -624,9 +546,6 @@ function displayRecentDonations(donations) {
     .join("");
 }
 
-// =====================================================
-// DISPLAY RECENT CAUSES
-// =====================================================
 function displayRecentCauses(causes) {
   const container = document.getElementById("recent-causes");
   if (!container) return;
@@ -672,20 +591,15 @@ function displayRecentCauses(causes) {
 // NAVIGATION
 // =====================================================
 function navigateToSection(sectionName) {
-  console.log("🔀 Navigating to:", sectionName);
-
-  // Hide all sections
   document.querySelectorAll(".section-content").forEach((section) => {
     section.classList.add("hidden");
   });
 
-  // Show selected section
   const targetSection = document.getElementById(`section-${sectionName}`);
   if (targetSection) {
     targetSection.classList.remove("hidden");
   }
 
-  // Update active nav link
   document.querySelectorAll(".nav-link").forEach((link) => {
     link.classList.remove("bg-blue-50", "text-blue-600");
     link.classList.add("text-gray-700");
@@ -697,18 +611,14 @@ function navigateToSection(sectionName) {
     activeLink.classList.remove("text-gray-700");
   }
 
-  // Load section data
   loadSectionData(sectionName);
 
-  // Close mobile sidebar
   if (window.innerWidth < 1024) {
     toggleSidebar();
   }
 }
 
-// =====================================================
-// LOAD SECTION DATA
-// =====================================================
+// ✅ FIXED: Update loadSectionData dengan case transparency
 async function loadSectionData(sectionName) {
   switch (sectionName) {
     case "causes":
@@ -720,6 +630,9 @@ async function loadSectionData(sectionName) {
     case "reports":
       await loadReports();
       break;
+    case "transparency":
+      await loadTransparency();
+      break;
     case "users":
       await loadUsers();
       break;
@@ -729,20 +642,15 @@ async function loadSectionData(sectionName) {
 }
 
 // =====================================================
-// LOAD CAUSES
+// CAUSES MANAGEMENT
 // =====================================================
 async function loadCauses() {
   try {
     showLoading();
-    console.log("📦 Loading causes...");
-
     const response = await window.API.causes.getAll();
     const causes = response.data || [];
-
     displayCauses(causes);
-
     hideLoading();
-    console.log(`✅ Loaded ${causes.length} causes`);
   } catch (error) {
     hideLoading();
     console.error("❌ Error loading causes:", error);
@@ -750,9 +658,6 @@ async function loadCauses() {
   }
 }
 
-// =====================================================
-// DISPLAY CAUSES
-// =====================================================
 function displayCauses(causes) {
   const container = document.getElementById("causes-list");
   if (!container) return;
@@ -842,22 +747,15 @@ function displayCauses(causes) {
     .join("");
 }
 
-// =====================================================
-// DELETE CAUSE
-// =====================================================
 async function deleteCause(id) {
   if (confirm("Apakah Anda yakin ingin menghapus program ini?")) {
     try {
       showLoading();
-      console.log("🗑️ Deleting cause:", id);
-
       await window.API.causes.delete(id);
       showNotification("Program berhasil dihapus", "success");
-
       await loadCauses();
       await loadDashboardStats();
       await loadRecentActivities();
-
       hideLoading();
     } catch (error) {
       hideLoading();
@@ -868,21 +766,16 @@ async function deleteCause(id) {
 }
 
 // =====================================================
-// LOAD DONATIONS
+// DONATIONS MANAGEMENT
 // =====================================================
 async function loadDonations(status = "") {
   try {
     showLoading();
-    console.log("💰 Loading donations...");
-
     const filters = status ? { status } : {};
     const response = await window.API.admin.getAllDonations(filters);
     const donations = response.data || [];
-
     displayDonations(donations);
-
     hideLoading();
-    console.log(`✅ Loaded ${donations.length} donations`);
   } catch (error) {
     hideLoading();
     console.error("❌ Error loading donations:", error);
@@ -890,9 +783,6 @@ async function loadDonations(status = "") {
   }
 }
 
-// =====================================================
-// DISPLAY DONATIONS
-// =====================================================
 function displayDonations(donations) {
   const container = document.getElementById("donations-list");
   if (!container) return;
@@ -912,10 +802,6 @@ function displayDonations(donations) {
       <table class="w-full">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Donatur</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Program</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Jumlah</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Tanggal</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Aksi</th>
           </tr>
@@ -984,22 +870,15 @@ function displayDonations(donations) {
   container.innerHTML = tableHTML;
 }
 
-// =====================================================
-// VERIFY DONATION
-// =====================================================
 async function verifyDonation(id) {
   if (confirm("Verifikasi donasi ini?")) {
     try {
       showLoading();
-      console.log("✅ Verifying donation:", id);
-
       await window.API.admin.verifyDonation(id);
       showNotification("Donasi berhasil diverifikasi", "success");
-
       await loadDonations();
       await loadDashboardStats();
       await loadRecentActivities();
-
       hideLoading();
     } catch (error) {
       hideLoading();
@@ -1009,21 +888,21 @@ async function verifyDonation(id) {
   }
 }
 
+function filterDonations() {
+  const status = document.getElementById("filter-donation-status").value;
+  loadDonations(status);
+}
+
 // =====================================================
-// LOAD USERS
+// USERS MANAGEMENT
 // =====================================================
 async function loadUsers() {
   try {
     showLoading();
-    console.log("👥 Loading users...");
-
     const response = await window.API.admin.getAllUsers();
     const users = response.data || [];
-
     displayUsers(users);
-
     hideLoading();
-    console.log(`✅ Loaded ${users.length} users`);
   } catch (error) {
     hideLoading();
     console.error("❌ Error loading users:", error);
@@ -1031,9 +910,6 @@ async function loadUsers() {
   }
 }
 
-// =====================================================
-// DISPLAY USERS
-// =====================================================
 function displayUsers(users) {
   const container = document.getElementById("users-list");
   if (!container) return;
@@ -1107,21 +983,1238 @@ function displayUsers(users) {
 }
 
 // =====================================================
-// OTHER FUNCTIONS
+// REPORTS MANAGEMENT
 // =====================================================
-function filterDonations() {
-  const status = document.getElementById("filter-donation-status").value;
-  loadDonations(status);
+async function loadReports() {
+  try {
+    showLoading();
+    await loadDonorsDropdown();
+    await loadCausesDropdown();
+    setupReportEventListeners();
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error loading reports:", error);
+    showNotification("Gagal memuat halaman laporan", "error");
+  }
 }
 
-async function loadReports() {
-  showNotification("Fitur laporan akan segera tersedia", "info");
+async function loadDonorsDropdown() {
+  try {
+    const response = await window.API.reports.getAllDonors();
+    const donors = response.data || [];
+
+    const selectDonor = document.getElementById("select-donor");
+    if (!selectDonor) return;
+
+    selectDonor.innerHTML = '<option value="">-- Pilih Donatur --</option>';
+
+    donors.forEach((donor) => {
+      const option = document.createElement("option");
+      option.value = donor._id;
+      option.textContent = `${donor.name} (${donor.email})`;
+      selectDonor.appendChild(option);
+    });
+  } catch (error) {
+    console.error("❌ Error loading donors:", error);
+  }
 }
+
+async function loadCausesDropdown() {
+  try {
+    const response = await window.API.causes.getAll();
+    const causes = response.data || [];
+
+    const selectCause = document.getElementById("select-cause-filter");
+    if (!selectCause) return;
+
+    selectCause.innerHTML = '<option value="">-- Semua Program --</option>';
+
+    causes.forEach((cause) => {
+      const option = document.createElement("option");
+      option.value = cause._id;
+      option.textContent = cause.title;
+      selectCause.appendChild(option);
+    });
+  } catch (error) {
+    console.error("❌ Error loading causes:", error);
+  }
+}
+
+function setupReportEventListeners() {
+  document
+    .getElementById("btn-download-donor-report")
+    ?.addEventListener("click", downloadDonorReport);
+
+  document
+    .getElementById("btn-download-all-report")
+    ?.addEventListener("click", downloadAllDonationsReport);
+
+  document.getElementById("btn-export-excel")?.addEventListener("click", () => {
+    showNotification("Fitur export Excel akan segera tersedia", "info");
+  });
+
+  document.getElementById("btn-export-csv")?.addEventListener("click", () => {
+    showNotification("Fitur export CSV akan segera tersedia", "info");
+  });
+
+  document
+    .getElementById("btn-view-report-history")
+    ?.addEventListener("click", () => {
+      showNotification("Fitur riwayat laporan akan segera tersedia", "info");
+    });
+}
+
+async function downloadDonorReport() {
+  try {
+    const donorId = document.getElementById("select-donor").value;
+
+    if (!donorId) {
+      showNotification("Silakan pilih donatur terlebih dahulu", "warning");
+      return;
+    }
+
+    showLoading();
+
+    const filters = {};
+    const startDate = document.getElementById("donor-start-date").value;
+    const endDate = document.getElementById("donor-end-date").value;
+
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
+
+    const response = await window.API.reports.getDonorReport(donorId, filters);
+    const reportData = response.data;
+
+    generateDonorPDF(reportData);
+
+    hideLoading();
+    showNotification("Laporan berhasil didownload!", "success");
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error downloading donor report:", error);
+    showNotification("Gagal mengenerate laporan", "error");
+  }
+}
+
+function generateDonorPDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const primaryColor = [30, 64, 175];
+  const headerBg = [219, 234, 254];
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.roundedRect(margin, margin, 15, 15, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.text("❤", margin + 4.5, margin + 11);
+
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFontSize(20);
+  doc.setFont(undefined, "bold");
+  doc.text("DARIKITA", margin + 18, margin + 8);
+
+  doc.setFontSize(10);
+  doc.setFont(undefined, "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text("Platform Donasi Digital", margin + 18, margin + 13);
+
+  doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+  doc.rect(margin, margin + 20, pageWidth - 2 * margin, 25, "F");
+
+  doc.setFontSize(16);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("LAPORAN DONASI PRIBADI – DARIKITA", margin + 5, margin + 28);
+
+  let yPos = margin + 36;
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Nama Donatur  : ${data.user.name}`, margin + 5, yPos);
+
+  yPos += 6;
+  doc.text(`Email Donatur  : ${data.user.email}`, margin + 5, yPos);
+
+  yPos += 6;
+  const currentDate = new Date().toLocaleDateString("id-ID", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  doc.text(`Tanggal Laporan: ${currentDate}`, margin + 5, yPos);
+
+  yPos += 12;
+
+  doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 20, 2, 2, "F");
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("RINGKASAN DONASI:", margin + 5, yPos + 7);
+
+  yPos += 13;
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text(
+    `Jumlah Transaksi: ${data.summary.totalTransactions}`,
+    margin + 5,
+    yPos
+  );
+
+  const totalFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 2,
+  }).format(data.summary.totalAmount);
+
+  doc.text(`Total Donasi: ${totalFormatted}`, margin + 100, yPos);
+
+  yPos += 12;
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("RIWAYAT DETAIL DONASI:", margin, yPos);
+
+  yPos += 8;
+
+  const tableData = data.donations.map((d, index) => [
+    (index + 1).toString(),
+    new Date(d.date).toLocaleDateString("id-ID"),
+    d.program,
+    d.category.charAt(0).toUpperCase() + d.category.slice(1),
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 2,
+    }).format(d.amount),
+    d.status === "distributed" ? "Sudah\nDisalurkan" : "Belum\nDisalurkan",
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    head: [
+      ["No", "Tanggal\nDonasi", "Program", "Kategori", "Jumlah", "Status"],
+    ],
+    body: tableData,
+    theme: "striped",
+    headStyles: {
+      fillColor: [30, 64, 175],
+      textColor: [255, 255, 255],
+      fontSize: 9,
+      fontStyle: "bold",
+      halign: "center",
+    },
+    bodyStyles: {
+      fontSize: 8,
+      textColor: [0, 0, 0],
+    },
+    alternateRowStyles: {
+      fillColor: [245, 247, 250],
+    },
+    columnStyles: {
+      0: { halign: "center", cellWidth: 10 },
+      1: { halign: "center", cellWidth: 25 },
+      2: { halign: "left", cellWidth: 50 },
+      3: { halign: "center", cellWidth: 25 },
+      4: { halign: "right", cellWidth: 35 },
+      5: { halign: "center", cellWidth: 30 },
+    },
+    margin: { left: margin, right: margin },
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 10;
+
+  if (finalY < pageHeight - 30) {
+    doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+    doc.rect(margin, finalY, pageWidth - 2 * margin, 20, "F");
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, "italic");
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    const footerText =
+      "Terima kasih atas kontribusi Anda untuk membantu sesama!";
+    doc.text(footerText, pageWidth / 2, finalY + 8, { align: "center" });
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, "bold");
+    const footerText2 =
+      "Platform DariKita - Lebih Dekat, Lebih Tepat, Lebih Bermanfaat";
+    doc.text(footerText2, pageWidth / 2, finalY + 14, { align: "center" });
+  }
+
+  const fileName = `Laporan_Donasi_${data.user.name.replace(/\s+/g, "_")}_${
+    new Date().toISOString().split("T")[0]
+  }.pdf`;
+  doc.save(fileName);
+}
+
+async function downloadAllDonationsReport() {
+  try {
+    showLoading();
+
+    const filters = {};
+    const startDate = document.getElementById("all-start-date").value;
+    const endDate = document.getElementById("all-end-date").value;
+    const causeId = document.getElementById("select-cause-filter").value;
+    const status = document.getElementById("select-distribution-status").value;
+
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
+    if (causeId) filters.causeId = causeId;
+    if (status) filters.status = status;
+
+    const response = await window.API.reports.getAllDonationsReport(filters);
+    const reportData = response.data;
+
+    generateAllDonationsPDF(reportData);
+
+    hideLoading();
+    showNotification("Laporan berhasil didownload!", "success");
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error downloading all donations report:", error);
+    showNotification("Gagal mengenerate laporan", "error");
+  }
+}
+
+function generateAllDonationsPDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const primaryColor = [30, 64, 175];
+  const headerBg = [219, 234, 254];
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.roundedRect(margin, margin, 15, 15, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.text("❤", margin + 4.5, margin + 11);
+
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFontSize(20);
+  doc.setFont(undefined, "bold");
+  doc.text("DARIKITA", margin + 18, margin + 8);
+
+  doc.setFontSize(10);
+  doc.setFont(undefined, "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text("Platform Donasi Digital", margin + 18, margin + 13);
+
+  doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+  doc.rect(margin, margin + 20, pageWidth - 2 * margin, 25, "F");
+
+  doc.setFontSize(16);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("LAPORAN SEMUA DONASI – DARIKITA", margin + 5, margin + 28);
+
+  let yPos = margin + 36;
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(0, 0, 0);
+
+  const currentDate = new Date().toLocaleDateString("id-ID", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  doc.text(`Tanggal Laporan: ${currentDate}`, margin + 5, yPos);
+
+  if (data.filters.startDate || data.filters.endDate) {
+    yPos += 6;
+    const startStr = data.filters.startDate
+      ? new Date(data.filters.startDate).toLocaleDateString("id-ID")
+      : "-";
+    const endStr = data.filters.endDate
+      ? new Date(data.filters.endDate).toLocaleDateString("id-ID")
+      : "-";
+    doc.text(`Periode: ${startStr} s.d ${endStr}`, margin + 5, yPos);
+  }
+
+  yPos += 12;
+
+  doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 25, 2, 2, "F");
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("RINGKASAN DONASI:", margin + 5, yPos + 7);
+
+  yPos += 13;
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text(
+    `Total Transaksi: ${data.summary.totalTransactions}`,
+    margin + 5,
+    yPos
+  );
+
+  const totalFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 2,
+  }).format(data.summary.totalAmount);
+
+  doc.text(`Total Donasi: ${totalFormatted}`, margin + 100, yPos);
+
+  yPos += 6;
+  doc.text(
+    `Sudah Disalurkan: ${data.summary.byStatus.distributed}`,
+    margin + 5,
+    yPos
+  );
+  doc.text(
+    `Belum Disalurkan: ${data.summary.byStatus.pending}`,
+    margin + 100,
+    yPos
+  );
+
+  yPos += 12;
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("RIWAYAT DETAIL DONASI:", margin, yPos);
+
+  yPos += 8;
+
+  const tableData = data.donations.map((d, index) => [
+    (index + 1).toString(),
+    new Date(d.date).toLocaleDateString("id-ID"),
+    d.donor.name,
+    d.program,
+    d.category.charAt(0).toUpperCase() + d.category.slice(1),
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 2,
+    }).format(d.amount),
+    d.status === "distributed" ? "Sudah\nDisalurkan" : "Belum\nDisalurkan",
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    head: [
+      ["No", "Tanggal", "Donatur", "Program", "Kategori", "Jumlah", "Status"],
+    ],
+    body: tableData,
+    theme: "striped",
+    headStyles: {
+      fillColor: [30, 64, 175],
+      textColor: [255, 255, 255],
+      fontSize: 8,
+      fontStyle: "bold",
+      halign: "center",
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: [0, 0, 0],
+    },
+    alternateRowStyles: {
+      fillColor: [245, 247, 250],
+    },
+    columnStyles: {
+      0: { halign: "center", cellWidth: 8 },
+      1: { halign: "center", cellWidth: 22 },
+      2: { halign: "left", cellWidth: 30 },
+      3: { halign: "left", cellWidth: 40 },
+      4: { halign: "center", cellWidth: 20 },
+      5: { halign: "right", cellWidth: 28 },
+      6: { halign: "center", cellWidth: 22 },
+    },
+    margin: { left: margin, right: margin },
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 10;
+
+  if (finalY < pageHeight - 30) {
+    doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+    doc.rect(margin, finalY, pageWidth - 2 * margin, 20, "F");
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, "italic");
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    const footerText =
+      "Terima kasih atas kontribusi semua donatur untuk membantu sesama!";
+    doc.text(footerText, pageWidth / 2, finalY + 8, { align: "center" });
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, "bold");
+    const footerText2 =
+      "Platform DariKita - Lebih Dekat, Lebih Tepat, Lebih Bermanfaat";
+    doc.text(footerText2, pageWidth / 2, finalY + 14, { align: "center" });
+  }
+
+  const fileName = `Laporan_Semua_Donasi_${
+    new Date().toISOString().split("T")[0]
+  }.pdf`;
+  doc.save(fileName);
+}
+
+// =====================================================
+// TRANSPARENCY REPORTS MANAGEMENT
+// =====================================================
+async function loadTransparency() {
+  try {
+    showLoading();
+    await loadCausesForTransparencyFilter();
+    await loadTransparencyReportsByCause();
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error loading transparency:", error);
+    showNotification("Gagal memuat laporan transparansi", "error");
+  }
+}
+
+async function loadCausesForTransparencyFilter() {
+  try {
+    const response = await window.API.causes.getAll();
+    const causes = response.data || [];
+
+    const selectCause = document.getElementById("filter-transparency-cause");
+    if (!selectCause) return;
+
+    selectCause.innerHTML = '<option value="">Semua Program</option>';
+
+    causes.forEach((cause) => {
+      const option = document.createElement("option");
+      option.value = cause._id;
+      option.textContent = cause.title;
+      selectCause.appendChild(option);
+    });
+  } catch (error) {
+    console.error("❌ Error loading causes:", error);
+  }
+}
+
+async function loadTransparencyReportsByCause() {
+  try {
+    const causesResponse = await window.API.causes.getAll();
+    const causes = causesResponse.data || [];
+
+    const container = document.getElementById("transparency-causes-list");
+    if (!container) return;
+
+    if (causes.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
+          <p class="text-gray-600">Belum ada program</p>
+        </div>
+      `;
+      return;
+    }
+
+    const causesWithReports = await Promise.all(
+      causes.map(async (cause) => {
+        try {
+          const reportsResponse = await window.API.transparency.getByCause(
+            cause._id
+          );
+          return {
+            cause,
+            reports: reportsResponse.data || [],
+            totalDisbursed: reportsResponse.totalDisbursed || 0,
+          };
+        } catch (error) {
+          return {
+            cause,
+            reports: [],
+            totalDisbursed: 0,
+          };
+        }
+      })
+    );
+
+    displayCausesWithReports(causesWithReports);
+  } catch (error) {
+    console.error("❌ Error loading transparency reports:", error);
+    showNotification("Gagal memuat laporan", "error");
+  }
+}
+
+function displayCausesWithReports(causesWithReports) {
+  const container = document.getElementById("transparency-causes-list");
+
+  container.innerHTML = causesWithReports
+    .map((item) => {
+      const { cause, reports, totalDisbursed } = item;
+      const remainingFunds = cause.currentAmount - totalDisbursed;
+      const disbursementPercentage =
+        cause.currentAmount > 0
+          ? Math.round((totalDisbursed / cause.currentAmount) * 100)
+          : 0;
+
+      return `
+      <div class="bg-white rounded-2xl shadow-lg p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div class="flex-1">
+            <h3 class="text-xl font-bold text-gray-900 mb-2">${cause.title}</h3>
+            <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+              ${cause.category}
+            </span>
+          </div>
+          <button
+            onclick="showCreateTransparencyModal('${cause._id}')"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            <i class="fas fa-plus mr-2"></i>Buat Laporan
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div class="bg-blue-50 rounded-lg p-4">
+            <p class="text-xs text-gray-600 mb-1">Dana Terkumpul</p>
+            <p class="text-lg font-bold text-blue-600">
+              ${formatCurrency(cause.currentAmount)}
+            </p>
+          </div>
+          <div class="bg-green-50 rounded-lg p-4">
+            <p class="text-xs text-gray-600 mb-1">Total Disalurkan</p>
+            <p class="text-lg font-bold text-green-600">
+              ${formatCurrency(totalDisbursed)}
+            </p>
+          </div>
+          <div class="bg-orange-50 rounded-lg p-4">
+            <p class="text-xs text-gray-600 mb-1">Sisa Dana</p>
+            <p class="text-lg font-bold text-orange-600">
+              ${formatCurrency(remainingFunds)}
+            </p>
+          </div>
+          <div class="bg-purple-50 rounded-lg p-4">
+            <p class="text-xs text-gray-600 mb-1">Progress Penyaluran</p>
+            <p class="text-lg font-bold text-purple-600">
+              ${disbursementPercentage}%
+            </p>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-gray-600">Progress Penyaluran</span>
+            <span class="font-semibold text-gray-900">${disbursementPercentage}%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-3">
+            <div 
+              class="bg-green-500 h-3 rounded-full transition-all duration-500"
+              style="width: ${Math.min(disbursementPercentage, 100)}%"
+            ></div>
+          </div>
+        </div>
+
+        <div class="border-t border-gray-200 pt-4">
+          <h4 class="text-sm font-bold text-gray-900 mb-3">
+            Laporan Penyaluran (${reports.length})
+          </h4>
+          ${
+            reports.length === 0
+              ? `
+            <p class="text-sm text-gray-500 text-center py-4">
+              Belum ada laporan penyaluran
+            </p>
+          `
+              : `
+            <div class="space-y-3">
+              ${reports
+                .map(
+                  (report) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div class="flex items-center space-x-3 flex-1">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <i class="fas fa-receipt text-green-600"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-semibold text-gray-900 truncate">
+                        ${new Date(report.date).toLocaleDateString("id-ID")}
+                      </p>
+                      <p class="text-xs text-gray-600">
+                        ${formatCurrency(report.amount)} • 
+                        ${report.photos.length} foto • 
+                        ${report.documents.length} dokumen
+                      </p>
+                    </div>
+                    <span class="px-2 py-1 rounded-full text-xs font-semibold ${
+                      report.status === "published"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-100 text-gray-800"
+                    }">
+                      ${report.status}
+                    </span>
+                  </div>
+                  <div class="flex items-center space-x-2 ml-4">
+                    <button
+                      onclick="viewTransparencyReport('${report._id}')"
+                      class="text-blue-600 hover:text-blue-700 p-2"
+                      title="Lihat Detail"
+                    >
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button
+                      onclick="showEditTransparencyModal('${report._id}')"
+                      class="text-orange-600 hover:text-orange-700 p-2"
+                      title="Edit"
+                    >
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button
+                      onclick="deleteTransparencyReport('${report._id}')"
+                      class="text-red-600 hover:text-red-700 p-2"
+                      title="Hapus"
+                    >
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+          `
+          }
+        </div>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+async function showCreateTransparencyModal(causeId) {
+  try {
+    showLoading();
+
+    const response = await window.API.causes.getById(causeId);
+    const cause = response.data;
+
+    const reportsResponse = await window.API.transparency.getByCause(causeId);
+    const totalDisbursed = reportsResponse.totalDisbursed || 0;
+    const remainingFunds = cause.currentAmount - totalDisbursed;
+
+    currentCauseForReport = cause;
+    currentEditingReportId = null;
+    selectedPhotos = [];
+    selectedDocuments = [];
+
+    document.getElementById("transparency-form").reset();
+    document.getElementById("transparency-cause-id").value = causeId;
+    document.getElementById("transparency-report-id").value = "";
+    document.getElementById("transparency-cause-name").textContent =
+      cause.title;
+    document.getElementById("remaining-funds").textContent =
+      formatCurrency(remainingFunds);
+    document.getElementById("max-amount-text").textContent =
+      formatCurrency(remainingFunds);
+    document
+      .getElementById("transparency-amount")
+      .setAttribute("max", remainingFunds);
+
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("transparency-date").value = today;
+
+    document.getElementById("photos-preview").innerHTML = "";
+    document.getElementById("documents-preview").innerHTML = "";
+    document.getElementById("transparency-desc-count").textContent = "0";
+
+    document.getElementById("transparency-modal-title").textContent =
+      "Buat Laporan Penyaluran";
+    document.getElementById("transparency-submit-text").textContent =
+      "Simpan Laporan";
+
+    document.getElementById("transparency-modal").classList.remove("hidden");
+
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error loading cause:", error);
+    showNotification("Gagal memuat data program", "error");
+  }
+}
+
+async function showEditTransparencyModal(reportId) {
+  try {
+    showLoading();
+
+    const response = await window.API.transparency.getById(reportId);
+    const report = response.data;
+
+    currentEditingReportId = reportId;
+    currentCauseForReport = report.cause;
+
+    const reportsResponse = await window.API.transparency.getByCause(
+      report.cause._id
+    );
+    const totalDisbursed = reportsResponse.totalDisbursed || 0;
+    const remainingFunds =
+      report.cause.currentAmount - totalDisbursed + report.amount;
+
+    document.getElementById("transparency-cause-id").value = report.cause._id;
+    document.getElementById("transparency-report-id").value = reportId;
+    document.getElementById("transparency-cause-name").textContent =
+      report.cause.title;
+    document.getElementById("transparency-date").value =
+      report.date.split("T")[0];
+    document.getElementById("transparency-amount").value = report.amount;
+    document.getElementById("transparency-description").value =
+      report.description;
+    document.getElementById("transparency-desc-count").textContent =
+      report.description.length;
+
+    document.querySelector(
+      `input[name="transparency-status"][value="${report.status}"]`
+    ).checked = true;
+
+    document.getElementById("remaining-funds").textContent =
+      formatCurrency(remainingFunds);
+    document.getElementById("max-amount-text").textContent =
+      formatCurrency(remainingFunds);
+    document
+      .getElementById("transparency-amount")
+      .setAttribute("max", remainingFunds);
+
+    displayExistingPhotos(report.photos, reportId);
+    displayExistingDocuments(report.documents, reportId);
+
+    document.getElementById("transparency-modal-title").textContent =
+      "Edit Laporan Penyaluran";
+    document.getElementById("transparency-submit-text").textContent =
+      "Update Laporan";
+
+    document.getElementById("transparency-modal").classList.remove("hidden");
+
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error loading report:", error);
+    showNotification("Gagal memuat laporan", "error");
+  }
+}
+
+function closeTransparencyModal() {
+  document.getElementById("transparency-modal").classList.add("hidden");
+  currentEditingReportId = null;
+  currentCauseForReport = null;
+  selectedPhotos = [];
+  selectedDocuments = [];
+}
+
+function handleTransparencyPhotos(event) {
+  const files = Array.from(event.target.files);
+
+  if (files.length + selectedPhotos.length > 10) {
+    showNotification("Maksimal 10 foto", "warning");
+    return;
+  }
+
+  files.forEach((file) => {
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification(`File ${file.name} terlalu besar (max 5MB)`, "error");
+      return;
+    }
+    selectedPhotos.push(file);
+  });
+
+  displayPhotosPreviews();
+}
+
+function displayPhotosPreviews() {
+  const container = document.getElementById("photos-preview");
+
+  container.innerHTML = selectedPhotos
+    .map((file, index) => {
+      const url = URL.createObjectURL(file);
+      return `
+      <div class="relative">
+        <img 
+          src="${url}" 
+          alt="Preview" 
+          class="w-full h-24 object-cover rounded-lg"
+        />
+        <button
+          type="button"
+          onclick="removePhoto(${index})"
+          class="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full hover:bg-red-600 text-xs"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+function removePhoto(index) {
+  selectedPhotos.splice(index, 1);
+  displayPhotosPreviews();
+}
+
+function handleTransparencyDocuments(event) {
+  const files = Array.from(event.target.files);
+
+  if (files.length + selectedDocuments.length > 5) {
+    showNotification("Maksimal 5 dokumen", "warning");
+    return;
+  }
+
+  files.forEach((file) => {
+    if (file.size > 10 * 1024 * 1024) {
+      showNotification(`File ${file.name} terlalu besar (max 10MB)`, "error");
+      return;
+    }
+    selectedDocuments.push(file);
+  });
+
+  displayDocumentsPreviews();
+}
+
+function displayDocumentsPreviews() {
+  const container = document.getElementById("documents-preview");
+
+  container.innerHTML = selectedDocuments
+    .map((file, index) => {
+      const icon = file.type.includes("pdf") ? "file-pdf" : "image";
+      const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+
+      return `
+      <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div class="flex items-center space-x-3 flex-1 min-w-0">
+          <i class="fas fa-${icon} text-gray-400 text-xl flex-shrink-0"></i>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-900 truncate">${file.name}</p>
+            <p class="text-xs text-gray-500">${sizeInMB} MB</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick="removeDocument(${index})"
+          class="text-red-500 hover:text-red-700 ml-2 flex-shrink-0"
+        >
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+function removeDocument(index) {
+  selectedDocuments.splice(index, 1);
+  displayDocumentsPreviews();
+}
+
+function displayExistingPhotos(photos, reportId) {
+  const container = document.getElementById("photos-preview");
+
+  container.innerHTML = photos
+    .map(
+      (photo) => `
+    <div class="relative">
+      <img 
+        src="${photo.url}" 
+        alt="Photo" 
+        class="w-full h-24 object-cover rounded-lg"
+      />
+      <button
+        type="button"
+        onclick="deleteExistingAttachment('${reportId}', '${photo._id}', 'photo')"
+        class="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full hover:bg-red-600 text-xs"
+      >
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `
+    )
+    .join("");
+}
+
+function displayExistingDocuments(documents, reportId) {
+  const container = document.getElementById("documents-preview");
+
+  container.innerHTML = documents
+    .map(
+      (doc) => `
+    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+      <div class="flex items-center space-x-3 flex-1 min-w-0">
+        <i class="fas fa-${
+          doc.fileType === "pdf" ? "file-pdf" : "image"
+        } text-gray-400 text-xl"></i>
+        <a 
+          href="${doc.url}" 
+          target="_blank"
+          class="text-sm text-blue-600 hover:text-blue-700 truncate flex-1"
+        >
+          ${doc.fileName}
+        </a>
+      </div>
+      <button
+        type="button"
+        onclick="deleteExistingAttachment('${reportId}', '${
+        doc._id
+      }', 'document')"
+        class="text-red-500 hover:text-red-700 ml-2"
+      >
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+  `
+    )
+    .join("");
+}
+
+async function deleteExistingAttachment(reportId, attachmentId, type) {
+  if (
+    !confirm(`Hapus ${type === "photo" ? "foto" : "dokumen"} ini dari laporan?`)
+  ) {
+    return;
+  }
+
+  try {
+    showLoading();
+    await window.API.transparency.deleteAttachment(
+      reportId,
+      attachmentId,
+      type
+    );
+    showNotification("Attachment berhasil dihapus", "success");
+    await showEditTransparencyModal(reportId);
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error deleting attachment:", error);
+    showNotification("Gagal menghapus attachment", "error");
+  }
+}
+
+document
+  .getElementById("transparency-form")
+  ?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    try {
+      showLoading();
+
+      const causeId = document.getElementById("transparency-cause-id").value;
+      const reportId = document.getElementById("transparency-report-id").value;
+      const amount = document.getElementById("transparency-amount").value;
+      const date = document.getElementById("transparency-date").value;
+      const description = document.getElementById(
+        "transparency-description"
+      ).value;
+      const status = document.querySelector(
+        'input[name="transparency-status"]:checked'
+      ).value;
+
+      const formData = new FormData();
+      formData.append("causeId", causeId);
+      formData.append("amount", amount);
+      formData.append("date", date);
+      formData.append("description", description);
+      formData.append("status", status);
+
+      selectedPhotos.forEach((photo) => {
+        formData.append("photos", photo);
+      });
+
+      selectedDocuments.forEach((doc) => {
+        formData.append("documents", doc);
+      });
+
+      let response;
+      if (reportId) {
+        response = await window.API.transparency.update(reportId, formData);
+        showNotification("Laporan berhasil diupdate!", "success");
+      } else {
+        response = await window.API.transparency.create(formData);
+        showNotification("Laporan berhasil dibuat!", "success");
+      }
+
+      closeTransparencyModal();
+      await loadTransparencyReportsByCause();
+
+      hideLoading();
+    } catch (error) {
+      hideLoading();
+      console.error("❌ Error saving report:", error);
+      showNotification(error.message || "Gagal menyimpan laporan", "error");
+    }
+  });
+
+async function viewTransparencyReport(reportId) {
+  try {
+    showLoading();
+    const response = await window.API.transparency.getById(reportId);
+    const report = response.data;
+
+    const reportDate = new Date(report.date).toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const modalHTML = `
+      <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" id="view-report-modal">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div class="sticky top-0 bg-white border-b px-6 py-4">
+            <div class="flex justify-between items-center">
+              <h2 class="text-2xl font-bold">Detail Laporan Penyaluran</h2>
+              <button onclick="document.getElementById('view-report-modal').remove()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-2xl"></i>
+              </button>
+            </div>
+          </div>
+          <div class="p-6">
+            <div class="mb-6">
+              <p class="text-sm text-gray-600">Program</p>
+              <p class="text-xl font-bold text-gray-900">${
+                report.cause.title
+              }</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <p class="text-sm text-gray-600">Tanggal Penyaluran</p>
+                <p class="text-lg font-semibold">${reportDate}</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">Jumlah Disalurkan</p>
+                <p class="text-lg font-semibold text-green-600">${formatCurrency(
+                  report.amount
+                )}</p>
+              </div>
+            </div>
+            <div class="mb-6">
+              <p class="text-sm font-bold text-gray-700 mb-2">Deskripsi</p>
+              <p class="text-gray-700 leading-relaxed">${report.description}</p>
+            </div>
+            ${
+              report.photos.length > 0
+                ? `
+              <div class="mb-6">
+                <p class="text-sm font-bold text-gray-700 mb-2">Foto Kegiatan</p>
+                <div class="grid grid-cols-3 gap-3">
+                  ${report.photos
+                    .map(
+                      (photo) => `
+                    <a href="${photo.url}" target="_blank">
+                      <img src="${photo.url}" class="w-full h-32 object-cover rounded-lg hover:opacity-80" />
+                    </a>
+                  `
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `
+                : ""
+            }
+            ${
+              report.documents.length > 0
+                ? `
+              <div>
+                <p class="text-sm font-bold text-gray-700 mb-2">Dokumen</p>
+                <div class="space-y-2">
+                  ${report.documents
+                    .map(
+                      (doc) => `
+                    <a href="${
+                      doc.url
+                    }" target="_blank" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                      <i class="fas fa-${
+                        doc.fileType === "pdf" ? "file-pdf" : "image"
+                      } mr-3"></i>
+                      <span>${doc.fileName}</span>
+                    </a>
+                  `
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error viewing report:", error);
+    showNotification("Gagal memuat detail laporan", "error");
+  }
+}
+
+async function deleteTransparencyReport(reportId) {
+  if (!confirm("Apakah Anda yakin ingin menghapus laporan ini?")) {
+    return;
+  }
+
+  try {
+    showLoading();
+    await window.API.transparency.delete(reportId);
+    showNotification("Laporan berhasil dihapus", "success");
+    await loadTransparencyReportsByCause();
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    console.error("❌ Error deleting report:", error);
+    showNotification("Gagal menghapus laporan", "error");
+  }
+}
+
+document
+  .getElementById("transparency-description")
+  ?.addEventListener("input", (e) => {
+    document.getElementById("transparency-desc-count").textContent =
+      e.target.value.length;
+  });
+
+document
+  .getElementById("btn-filter-transparency")
+  ?.addEventListener("click", async () => {
+    const causeId = document.getElementById("filter-transparency-cause").value;
+
+    try {
+      showLoading();
+
+      if (causeId) {
+        const response = await window.API.transparency.getByCause(causeId);
+        const causeResponse = await window.API.causes.getById(causeId);
+
+        displayCausesWithReports([
+          {
+            cause: causeResponse.data,
+            reports: response.data || [],
+            totalDisbursed: response.totalDisbursed || 0,
+          },
+        ]);
+      } else {
+        await loadTransparencyReportsByCause();
+      }
+
+      hideLoading();
+    } catch (error) {
+      hideLoading();
+      console.error("❌ Error filtering:", error);
+      showNotification("Gagal memfilter laporan", "error");
+    }
+  });
 
 // =====================================================
 // UTILITY FUNCTIONS
 // =====================================================
-
 function toggleSidebar() {
   const sidebar = document.getElementById("sidebar");
   const overlay = document.getElementById("sidebar-overlay");
@@ -1134,7 +2227,6 @@ function toggleSidebar() {
 
 function handleLogout() {
   if (confirm("Apakah Anda yakin ingin keluar?")) {
-    console.log("👋 Logging out...");
     window.API.auth.logout();
     showNotification("Berhasil logout", "success");
     setTimeout(() => {
@@ -1219,7 +2311,6 @@ function showNotification(message, type = "info") {
   }, 5000);
 }
 
-// Add CSS animations
 const style = document.createElement("style");
 style.textContent = `
   @keyframes slideIn {
@@ -1234,7 +2325,7 @@ style.textContent = `
 document.head.appendChild(style);
 
 // =====================================================
-// EXPOSE GLOBAL FUNCTIONS (untuk onclick di HTML)
+// EXPOSE GLOBAL FUNCTIONS
 // =====================================================
 window.showCreateCauseModal = showCreateCauseModal;
 window.closeCauseModal = closeCauseModal;
@@ -1244,5 +2335,18 @@ window.removeImage = removeImage;
 window.deleteCause = deleteCause;
 window.verifyDonation = verifyDonation;
 window.filterDonations = filterDonations;
+window.downloadDonorReport = downloadDonorReport;
+window.downloadAllDonationsReport = downloadAllDonationsReport;
+window.loadTransparency = loadTransparency;
+window.showCreateTransparencyModal = showCreateTransparencyModal;
+window.showEditTransparencyModal = showEditTransparencyModal;
+window.closeTransparencyModal = closeTransparencyModal;
+window.handleTransparencyPhotos = handleTransparencyPhotos;
+window.handleTransparencyDocuments = handleTransparencyDocuments;
+window.removePhoto = removePhoto;
+window.removeDocument = removeDocument;
+window.deleteExistingAttachment = deleteExistingAttachment;
+window.viewTransparencyReport = viewTransparencyReport;
+window.deleteTransparencyReport = deleteTransparencyReport;
 
 console.log("✅ Admin.js loaded successfully");

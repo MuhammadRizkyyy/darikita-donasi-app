@@ -231,17 +231,83 @@
           </button>
         </div>
 
-        <!-- Progress Updates Section -->
-        <div
-          id="updates-section"
-          class="bg-gray-50 p-6 sm:p-8 border-t border-gray-200"
-        >
-          <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-            <i class="fas fa-history text-blue-600 mr-2"></i>
-            Update Terbaru
-          </h3>
-          <div id="updates-container" class="space-y-4">
-            <p class="text-gray-500 text-center py-8">Belum ada update</p>
+        <!-- Progress Updates & Transparency Reports Section -->
+        <div class="bg-gray-50 p-6 sm:p-8 border-t border-gray-200">
+          <!-- Tab Navigation -->
+          <div class="flex border-b border-gray-200 mb-6">
+            <button
+              id="tab-updates"
+              class="tab-btn px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600"
+              onclick="switchTab('updates')"
+            >
+              <i class="fas fa-history mr-2"></i>Update Progress
+            </button>
+            <button
+              id="tab-transparency"
+              class="tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-gray-700"
+              onclick="switchTab('transparency')"
+            >
+              <i class="fas fa-receipt mr-2"></i>Laporan Transparansi
+            </button>
+          </div>
+
+          <!-- Updates Tab Content -->
+          <div id="content-updates" class="tab-content">
+            <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+              <i class="fas fa-history text-blue-600 mr-2"></i>
+              Update Terbaru
+            </h3>
+            <div id="updates-container" class="space-y-4">
+              <p class="text-gray-500 text-center py-8">Belum ada update</p>
+            </div>
+          </div>
+
+          <!-- Transparency Reports Tab Content -->
+          <div id="content-transparency" class="tab-content hidden">
+            <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+              <i class="fas fa-receipt text-green-600 mr-2"></i>
+              Laporan Penyaluran Dana
+            </h3>
+
+            <!-- Summary Box -->
+            <div class="bg-white rounded-xl p-6 mb-6 shadow-sm">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                  <p class="text-sm text-gray-600 mb-1">Total Terkumpul</p>
+                  <p
+                    id="summary-collected"
+                    class="text-2xl font-bold text-blue-600"
+                  >
+                    Rp 0
+                  </p>
+                </div>
+                <div class="text-center">
+                  <p class="text-sm text-gray-600 mb-1">Total Disalurkan</p>
+                  <p
+                    id="summary-disbursed"
+                    class="text-2xl font-bold text-green-600"
+                  >
+                    Rp 0
+                  </p>
+                </div>
+                <div class="text-center">
+                  <p class="text-sm text-gray-600 mb-1">Sisa Dana</p>
+                  <p
+                    id="summary-remaining"
+                    class="text-2xl font-bold text-gray-900"
+                  >
+                    Rp 0
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reports List -->
+            <div id="transparency-reports-container" class="space-y-6">
+              <p class="text-gray-500 text-center py-8">
+                Belum ada laporan penyaluran
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -723,5 +789,187 @@
         setTimeout(() => notif?.remove(), 5000);
       }
     </script>
+
+    <script>
+      // Tab switching
+      function switchTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll(".tab-btn").forEach((btn) => {
+          btn.classList.remove(
+            "text-blue-600",
+            "border-b-2",
+            "border-blue-600"
+          );
+          btn.classList.add("text-gray-500");
+        });
+
+        const activeBtn = document.getElementById(`tab-${tab}`);
+        activeBtn.classList.add(
+          "text-blue-600",
+          "border-b-2",
+          "border-blue-600"
+        );
+        activeBtn.classList.remove("text-gray-500");
+
+        // Update content
+        document.querySelectorAll(".tab-content").forEach((content) => {
+          content.classList.add("hidden");
+        });
+
+        document.getElementById(`content-${tab}`).classList.remove("hidden");
+      }
+
+      // Load transparency reports
+      async function loadTransparencyReports() {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/transparency/cause/${causeId}`
+          );
+          const data = await response.json();
+
+          if (data.success && data.data && data.data.length > 0) {
+            displayTransparencyReports(data.data);
+
+            // Update summary
+            const totalDisbursed = data.totalDisbursed || 0;
+            const collected = currentCause.currentAmount || 0;
+            const remaining = collected - totalDisbursed;
+
+            document.getElementById("summary-collected").textContent =
+              "Rp " + collected.toLocaleString("id-ID");
+            document.getElementById("summary-disbursed").textContent =
+              "Rp " + totalDisbursed.toLocaleString("id-ID");
+            document.getElementById("summary-remaining").textContent =
+              "Rp " + remaining.toLocaleString("id-ID");
+          }
+        } catch (error) {
+          console.error("Error loading transparency reports:", error);
+        }
+      }
+
+      // Display transparency reports
+      function displayTransparencyReports(reports) {
+        const container = document.getElementById(
+          "transparency-reports-container"
+        );
+
+        container.innerHTML = reports
+          .map((report, index) => {
+            const reportDate = new Date(report.date).toLocaleDateString(
+              "id-ID",
+              {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              }
+            );
+
+            return `
+        <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-green-500">
+          <!-- Report Header -->
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h4 class="text-lg font-bold text-gray-900">
+                Laporan #${reports.length - index}
+              </h4>
+              <p class="text-sm text-gray-600">${reportDate}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm text-gray-600">Jumlah Disalurkan</p>
+              <p class="text-2xl font-bold text-green-600">
+                Rp ${report.amount.toLocaleString("id-ID")}
+              </p>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="mb-4">
+            <p class="text-gray-700 leading-relaxed">${report.description}</p>
+          </div>
+
+          <!-- Photos -->
+          ${
+            report.photos && report.photos.length > 0
+              ? `
+            <div class="mb-4">
+              <p class="text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-images mr-1"></i>Foto Kegiatan
+              </p>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                ${report.photos
+                  .map(
+                    (photo) => `
+                  <a href="${photo.url}" target="_blank" class="block">
+                    <img 
+                      src="${photo.url}" 
+                      alt="Foto kegiatan"
+                      class="w-full h-32 object-cover rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
+                    />
+                  </a>
+                `
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+              : ""
+          }
+
+          <!-- Documents -->
+          ${
+            report.documents && report.documents.length > 0
+              ? `
+            <div>
+              <p class="text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-file-pdf mr-1"></i>Dokumen Pendukung
+              </p>
+              <div class="space-y-2">
+                ${report.documents
+                  .map(
+                    (doc) => `
+                  <a 
+                    href="${doc.url}" 
+                    target="_blank"
+                    class="flex items-center px-4 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <i class="fas fa-${
+                      doc.fileType === "pdf" ? "file-pdf" : "image"
+                    } text-red-500 mr-3"></i>
+                    <span class="text-sm text-gray-700 flex-1">${
+                      doc.fileName
+                    }</span>
+                    <i class="fas fa-download text-gray-400"></i>
+                  </a>
+                `
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+              : ""
+          }
+        </div>
+      `;
+          })
+          .join("");
+      }
+
+      // Load transparency reports after cause detail loaded
+      const originalDisplayCauseDetail = displayCauseDetail;
+      displayCauseDetail = function (cause) {
+        originalDisplayCauseDetail(cause);
+        loadTransparencyReports();
+      };
+    </script>
+
+    <style>
+      .tab-btn {
+        transition: all 0.3s ease;
+      }
+
+      .tab-btn:hover {
+        background-color: rgba(59, 130, 246, 0.05);
+      }
+    </style>
   </body>
 </html>
