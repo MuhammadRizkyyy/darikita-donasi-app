@@ -1,28 +1,29 @@
+// backend/routes/causes.js
 const express = require("express");
 const {
   getCauses,
-  getCause, // ✅ Changed from getCauseById
+  getCause,
   createCause,
   updateCause,
   deleteCause,
-  updateCauseProgress, // ✅ Changed from addCauseUpdate
+  updateCauseProgress,
 } = require("../controllers/causeController");
 const { protect } = require("../middleware/auth");
 const { roleCheck } = require("../middleware/roleCheck");
-const { upload } = require("../config/cloudinary");
+const { uploadCauseImage } = require("../config/cloudinary"); // ✅ FIXED: Changed from upload to uploadCauseImage
 
 const router = express.Router();
 
 // Public routes
 router.get("/", getCauses);
-router.get("/:id", getCause); // ✅ Fixed
+router.get("/:id", getCause);
 
 // Protected routes - Admin only
 router.post(
   "/",
   protect,
   roleCheck(["admin"]),
-  upload.single("image"), // Handle single image upload
+  uploadCauseImage.single("image"), // ✅ FIXED
   createCause
 );
 
@@ -30,18 +31,18 @@ router.put(
   "/:id",
   protect,
   roleCheck(["admin"]),
-  upload.single("image"), // Handle image upload on update
+  uploadCauseImage.single("image"), // ✅ FIXED
   updateCause
 );
 
 router.delete("/:id", protect, roleCheck(["admin"]), deleteCause);
 
 router.post(
-  "/:id/progress", // ✅ Changed from /updates to /progress
+  "/:id/progress",
   protect,
   roleCheck(["admin"]),
-  upload.array("images", 5), // Allow multiple images for progress updates (max 5)
-  updateCauseProgress // ✅ Fixed function name
+  uploadCauseImage.array("images", 5), // ✅ FIXED
+  updateCauseProgress
 );
 
 module.exports = router;

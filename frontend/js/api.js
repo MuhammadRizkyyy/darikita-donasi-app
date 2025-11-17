@@ -1,5 +1,10 @@
-// API Configuration
-const API_BASE_URL = "http://localhost:5000/api";
+/**
+ * DariKita API Client
+ * Version: 1.0.0
+ */
+
+// API Configuration - HANYA SATU DEKLARASI
+window.API_BASE_URL = window.API_BASE_URL || "http://localhost:5000/api";
 
 // Get token from localStorage
 const getToken = () => localStorage.getItem("token");
@@ -31,7 +36,9 @@ const apiRequest = async (endpoint, options = {}) => {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  if (!(options.body instanceof FormData)) {
+  // ✅ PENTING: Jangan set Content-Type jika body adalah FormData
+  const isFormData = options.body instanceof FormData;
+  if (!isFormData) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -41,7 +48,7 @@ const apiRequest = async (endpoint, options = {}) => {
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    const response = await fetch(`${window.API_BASE_URL}${endpoint}`, config);
     const data = await response.json();
 
     if (!response.ok) {
@@ -227,51 +234,37 @@ const reportsAPI = {
   },
 };
 
-// ✨ NEW: Transparency Reports API
+// Transparency Reports API
 const transparencyAPI = {
-  // Get all reports (admin)
   getAll: async (filters = {}) => {
     const queryString = new URLSearchParams(filters).toString();
     return await apiRequest(
       `/transparency${queryString ? "?" + queryString : ""}`
     );
   },
-
-  // Get reports by cause (public)
   getByCause: async (causeId) => {
     return await apiRequest(`/transparency/cause/${causeId}`);
   },
-
-  // Get single report
   getById: async (id) => {
     return await apiRequest(`/transparency/${id}`);
   },
-
-  // Create report (admin)
   create: async (reportData) => {
-    const isFormData = reportData instanceof FormData;
     return await apiRequest("/transparency", {
       method: "POST",
-      body: reportData, // Always FormData for file uploads
+      body: reportData,
     });
   },
-
-  // Update report (admin)
   update: async (id, reportData) => {
     return await apiRequest(`/transparency/${id}`, {
       method: "PUT",
-      body: reportData, // FormData
+      body: reportData,
     });
   },
-
-  // Delete report (admin)
   delete: async (id) => {
     return await apiRequest(`/transparency/${id}`, {
       method: "DELETE",
     });
   },
-
-  // Delete attachment
   deleteAttachment: async (reportId, attachmentId, type) => {
     return await apiRequest(`/transparency/${reportId}/attachment`, {
       method: "DELETE",
@@ -285,32 +278,29 @@ const auditorAPI = {
   getStats: async () => {
     return await apiRequest("/auditor/stats");
   },
-
   getAllDonations: async (filters = {}) => {
     const queryString = new URLSearchParams(filters).toString();
     return await apiRequest(
       `/auditor/donations${queryString ? "?" + queryString : ""}`
     );
   },
-
   getDonationDetail: async (id) => {
     return await apiRequest(`/auditor/donations/${id}`);
   },
-
+  // ✅ UPDATED: Support both JSON and FormData
   markAsAudited: async (id, data) => {
+    const isFormData = data instanceof FormData;
     return await apiRequest(`/auditor/donations/${id}/audit`, {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: isFormData ? data : JSON.stringify(data), // Don't stringify FormData
     });
   },
-
   getAuditLogs: async (filters = {}) => {
     const queryString = new URLSearchParams(filters).toString();
     return await apiRequest(
       `/auditor/logs${queryString ? "?" + queryString : ""}`
     );
   },
-
   generateReport: async (filters = {}) => {
     const queryString = new URLSearchParams(filters).toString();
     return await apiRequest(
@@ -329,3 +319,5 @@ window.API = {
   transparency: transparencyAPI,
   auditor: auditorAPI,
 };
+
+console.log("✅ API.js loaded successfully");

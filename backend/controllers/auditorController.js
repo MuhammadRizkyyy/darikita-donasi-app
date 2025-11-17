@@ -258,6 +258,11 @@ exports.markDonationAudited = async (req, res) => {
     donation.auditedAt = Date.now();
     donation.auditNotes = auditNotes || "";
 
+    // ✅ NEW: Save audit document URL if file uploaded
+    if (req.file) {
+      donation.auditDocument = req.file.path; // Cloudinary URL
+    }
+
     await donation.save();
 
     // Create audit log
@@ -274,6 +279,7 @@ exports.markDonationAudited = async (req, res) => {
       },
       metadata: {
         description: `Donation ${donation._id} marked as ${auditStatus}`,
+        auditDocument: req.file ? req.file.path : null,
       },
     });
 

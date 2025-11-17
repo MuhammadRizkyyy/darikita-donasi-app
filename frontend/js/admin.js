@@ -14,6 +14,8 @@ let selectedPhotos = [];
 let selectedDocuments = [];
 let currentCauseForReport = null;
 
+let allUsers = [];
+
 // Check authentication on page load
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Dashboard initialized");
@@ -619,7 +621,6 @@ function navigateToSection(sectionName) {
   }
 }
 
-// ✅ FIXED: Update loadSectionData dengan case transparency
 async function loadSectionData(sectionName) {
   switch (sectionName) {
     case "causes":
@@ -689,10 +690,13 @@ function displayCauses(causes) {
 
       return `
       <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-hover">
-        <img src="${cause.image || "https://via.placeholder.com/400x200"}" 
+        <img src="${
+          cause.image ||
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect fill='%234F46E5' width='400' height='200'/%3E%3Ctext fill='white' font-size='24' font-family='system-ui' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3EDariKita%3C/text%3E%3C/svg%3E"
+        }" 
              alt="${cause.title}" 
              class="w-full h-48 object-cover"
-             onerror="this.src='https://via.placeholder.com/400x200?text=DariKita'">
+             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27200%27%3E%3Crect fill=%27%234F46E5%27 width=%27400%27 height=%27200%27/%3E%3Ctext fill=%27white%27 font-size=%2724%27 font-family=%27system-ui%27 x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27%3EDariKita%3C/text%3E%3C/svg%3E'">
         <div class="p-6">
           <div class="flex items-center justify-between mb-3">
             <span class="px-3 py-1 rounded-full text-xs font-semibold ${
@@ -803,6 +807,10 @@ function displayDonations(donations) {
       <table class="w-full">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Donatur</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Program</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Jumlah</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Tanggal</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Aksi</th>
           </tr>
@@ -901,8 +909,8 @@ async function loadUsers() {
   try {
     showLoading();
     const response = await window.API.admin.getAllUsers();
-    const users = response.data || [];
-    displayUsers(users);
+    allUsers = response.data || [];
+    displayUsers(allUsers);
     hideLoading();
   } catch (error) {
     hideLoading();
@@ -933,7 +941,6 @@ function displayUsers(users) {
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Nama</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Role</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Total Donasi</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Bergabung</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Aksi</th>
           </tr>
@@ -962,14 +969,6 @@ function displayUsers(users) {
                   <span class="px-3 py-1 rounded-full text-xs font-semibold ${roleColor}">
                     ${user.role}
                   </span>
-                </td>
-                <td class="px-6 py-4">
-                  <div class="font-semibold text-gray-900">${formatCurrency(
-                    user.totalAmount || 0
-                  )}</div>
-                  <div class="text-sm text-gray-500">${
-                    user.totalDonations || 0
-                  } donasi</div>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-600">${joinDate}</td>
                 <td class="px-6 py-4">
@@ -2254,7 +2253,6 @@ async function submitUserRole() {
     if (response.success) {
       showNotification("Role berhasil diubah!", "success");
       closeUserRoleModal();
-      // ✅ PERBAIKAN: Ganti loadAllUsers() dengan loadUsers()
       await loadUsers();
     }
 
@@ -2264,6 +2262,22 @@ async function submitUserRole() {
     showNotification("Gagal mengubah role", "error");
   }
 }
+
+// Event listener untuk live search
+document
+  .getElementById("search-user-email")
+  ?.addEventListener("input", function (e) {
+    const searchTerm = e.target.value.toLowerCase().trim();
+
+    if (searchTerm === "") {
+      displayUsers(allUsers);
+    } else {
+      const filteredUsers = allUsers.filter((user) =>
+        user.email.toLowerCase().includes(searchTerm)
+      );
+      displayUsers(filteredUsers);
+    }
+  });
 
 // =====================================================
 // UTILITY FUNCTIONS

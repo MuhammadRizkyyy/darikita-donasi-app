@@ -361,9 +361,10 @@
       </div>
     </div>
 
+    <!-- Load scripts in correct order -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
     <script>
-      const API_BASE_URL = "http://localhost:5000/api";
-
       // =====================================================
       // INITIALIZATION
       // =====================================================
@@ -403,7 +404,11 @@
       // REDIRECT BASED ON ROLE
       // =====================================================
       function redirectBasedOnRole(role) {
-        window.utils.redirectBasedOnRole(role);
+        if (window.utils && window.utils.redirectBasedOnRole) {
+          window.utils.redirectBasedOnRole(role);
+        } else {
+          console.error("Utils not loaded");
+        }
       }
 
       // =====================================================
@@ -603,20 +608,22 @@
 
           console.log("📝 Attempting registration for:", email);
 
-          // Prepare request body - sesuai dengan backend
+          // Use API from api.js
           const requestBody = {
             name,
             email,
             password,
-            role: "donatur", // default role
+            role: "donatur",
           };
 
-          // Add phone if provided
           if (phone) {
             requestBody.phone = phone;
           }
 
-          const response = await fetch(`${API_BASE_URL}/auth/register`, {
+          // Get API_BASE_URL from window.API
+          const API_URL = window.API_BASE_URL || "http://localhost:5000/api";
+
+          const response = await fetch(`${API_URL}/auth/register`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -642,7 +649,7 @@
           console.log("✅ Registration successful!");
           console.log("👤 User data:", data.data.user);
 
-          // Backend sudah mengirim token, save langsung
+          // Save token and user data
           localStorage.setItem("token", data.data.token);
           localStorage.setItem("userData", JSON.stringify(data.data.user));
 
@@ -674,19 +681,22 @@
       // UTILITY FUNCTIONS
       // =====================================================
       function showLoading(message) {
-        window.utils.showLoading(message);
+        if (window.utils && window.utils.showLoading) {
+          window.utils.showLoading(message);
+        }
       }
 
       function hideLoading() {
-        window.utils.hideLoading();
+        if (window.utils && window.utils.hideLoading) {
+          window.utils.hideLoading();
+        }
       }
 
       function showNotification(message, type) {
-        window.utils.showNotification(message, type);
+        if (window.utils && window.utils.showNotification) {
+          window.utils.showNotification(message, type);
+        }
       }
     </script>
-    <script src="js/utils.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/admin.js"></script>
   </body>
 </html>

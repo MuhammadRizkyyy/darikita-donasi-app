@@ -94,6 +94,9 @@ const donationSchema = new mongoose.Schema(
       type: String,
       maxlength: [1000, "Audit notes cannot exceed 1000 characters"],
     },
+    auditDocument: {
+      type: String, // URL to PDF from Cloudinary
+    },
   },
   {
     timestamps: true,

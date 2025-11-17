@@ -78,14 +78,8 @@
             </div>
           </a>
 
-          <!-- Navigation Links -->
+          <!-- Navigation Links - Beranda dihilangkan -->
           <div class="hidden md:flex items-center space-x-6">
-            <a
-              href="index.html"
-              class="text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <i class="fas fa-home mr-2"></i>Beranda
-            </a>
             <a
               href="causes.html"
               class="text-gray-600 hover:text-blue-600 transition-colors font-medium"
@@ -110,17 +104,11 @@
         </div>
       </div>
 
-      <!-- Mobile Menu -->
+      <!-- Mobile Menu - Beranda dihilangkan -->
       <div id="mobile-menu" class="hidden md:hidden border-t border-gray-200">
         <div class="px-4 py-3 space-y-2">
           <a
-            href="index.html"
-            class="block text-gray-600 hover:text-blue-600 py-2 transition-colors"
-          >
-            <i class="fas fa-home mr-2"></i>Beranda
-          </a>
-          <a
-            href="index.html#programs"
+            href="causes.html"
             class="block text-gray-600 hover:text-blue-600 py-2 transition-colors"
           >
             <i class="fas fa-hands-helping mr-2"></i>Program
@@ -335,12 +323,118 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-white mt-16">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="text-center">
-          <p class="text-gray-400">
+    <footer class="bg-gray-900 text-white py-12 mt-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <!-- Brand -->
+          <div class="col-span-1 md:col-span-2">
+            <div class="flex items-center mb-4">
+              <div
+                class="w-10 h-10 hero-gradient rounded-lg flex items-center justify-center mr-3"
+              >
+                <i class="fas fa-heart text-white text-lg"></i>
+              </div>
+              <span class="text-2xl font-bold text-white">DariKita</span>
+            </div>
+            <p class="text-gray-400 mb-4 max-w-md">
+              Platform donasi terpercaya untuk membantu UMKM Indonesia
+              berkembang dan menciptakan dampak positif bagi masyarakat.
+            </p>
+            <div class="flex space-x-4">
+              <a
+                href="#"
+                class="text-gray-400 hover:text-white transition-colors"
+              >
+                <i class="fab fa-facebook-f text-xl"></i>
+              </a>
+              <a
+                href="#"
+                class="text-gray-400 hover:text-white transition-colors"
+              >
+                <i class="fab fa-twitter text-xl"></i>
+              </a>
+              <a
+                href="#"
+                class="text-gray-400 hover:text-white transition-colors"
+              >
+                <i class="fab fa-instagram text-xl"></i>
+              </a>
+              <a
+                href="#"
+                class="text-gray-400 hover:text-white transition-colors"
+              >
+                <i class="fab fa-linkedin-in text-xl"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Quick Links -->
+          <div>
+            <h3 class="text-lg font-semibold mb-4">Tautan Cepat</h3>
+            <ul class="space-y-2">
+              <li>
+                <a
+                  href="causes.html"
+                  class="text-gray-400 hover:text-white transition-colors"
+                  >Program</a
+                >
+              </li>
+              <li>
+                <a
+                  href="index.html#cara-kerja"
+                  class="text-gray-400 hover:text-white transition-colors"
+                  >Cara Kerja</a
+                >
+              </li>
+              <li>
+                <a
+                  href="index.html#tentang"
+                  class="text-gray-400 hover:text-white transition-colors"
+                  >Tentang Kami</a
+                >
+              </li>
+            </ul>
+          </div>
+
+          <!-- Contact -->
+          <div>
+            <h3 class="text-lg font-semibold mb-4">Hubungi Kami</h3>
+            <ul class="space-y-2 text-gray-400">
+              <li class="flex items-start">
+                <i class="fas fa-envelope mt-1 mr-3"></i>
+                <span>info@darikita.com</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-phone mt-1 mr-3"></i>
+                <span>+62 812-3456-7890</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-map-marker-alt mt-1 mr-3"></i>
+                <span>Jakarta, Indonesia</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div
+          class="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center"
+        >
+          <p class="text-gray-400 text-sm">
             &copy; 2025 DariKita. All rights reserved.
           </p>
+          <div class="flex space-x-6 mt-4 md:mt-0">
+            <a
+              href="#"
+              class="text-gray-400 hover:text-white text-sm transition-colors"
+              >Kebijakan Privasi</a
+            >
+            <a
+              href="#"
+              class="text-gray-400 hover:text-white text-sm transition-colors"
+              >Syarat & Ketentuan</a
+            >
+          </div>
         </div>
       </div>
     </footer>
@@ -354,5 +448,30 @@
     <!-- Include API and Dashboard Scripts -->
     <script src="js/api.js"></script>
     <script src="js/dashboard.js"></script>
+
+    <script>
+      // Mobile menu toggle
+      document
+        .getElementById("mobile-menu-btn")
+        .addEventListener("click", function () {
+          const mobileMenu = document.getElementById("mobile-menu");
+          mobileMenu.classList.toggle("hidden");
+        });
+
+      // Logout handlers
+      function handleLogout() {
+        if (confirm("Apakah Anda yakin ingin keluar?")) {
+          localStorage.clear();
+          window.location.href = "index.html";
+        }
+      }
+
+      document
+        .getElementById("logout-btn")
+        .addEventListener("click", handleLogout);
+      document
+        .getElementById("logout-btn-mobile")
+        .addEventListener("click", handleLogout);
+    </script>
   </body>
 </html>

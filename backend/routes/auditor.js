@@ -1,3 +1,4 @@
+// backend/routes/auditor.js
 const express = require("express");
 const {
   getAuditorStats,
@@ -10,29 +11,26 @@ const {
 const { protect } = require("../middleware/auth");
 const { roleCheck } = require("../middleware/roleCheck");
 const { logAudit } = require("../middleware/auditLogger");
+const { uploadAuditDocument } = require("../config/cloudinary"); // ✅ NEW
 
 const router = express.Router();
 
-// All routes require auditor role
 router.use(protect);
 router.use(roleCheck(["auditor"]));
 
-// Dashboard & Statistics
 router.get("/stats", getAuditorStats);
-
-// Donation Audit Management
 router.get("/donations", getAllDonationsForAudit);
 router.get("/donations/:id", getDonationDetail);
+
+// ✅ UPDATED: Tambah uploadAuditDocument.single("auditDocument")
 router.put(
   "/donations/:id/audit",
+  uploadAuditDocument.single("auditDocument"), // Handle file upload
   logAudit("audit_report_verified", "Donation"),
   markDonationAudited
 );
 
-// Audit Logs
 router.get("/logs", getAuditLogs);
-
-// Reports
 router.get("/report", generateAuditReport);
 
 module.exports = router;
