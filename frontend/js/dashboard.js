@@ -91,7 +91,7 @@ function setupEventListeners() {
     .getElementById("download-btn")
     ?.addEventListener("click", handleDownloadData);
 
-  // PDF Report button (NEW) ← TAMBAHKAN INI
+  // PDF Report button (NEW)
   setupPDFReportListener();
 }
 
@@ -358,18 +358,7 @@ function createDonationCard(donation, index) {
 // HANDLE LOGOUT
 // =====================================================
 function handleLogout() {
-  if (confirm("Apakah Anda yakin ingin keluar?")) {
-    console.log("👋 Logging out...");
-
-    // Clear all auth data
-    window.API.auth.logout();
-
-    showNotification("Berhasil logout. Sampai jumpa!", "success");
-
-    setTimeout(() => {
-      window.location.href = "index.html";
-    }, 1500);
-  }
+  window.utils.logout();
 }
 
 // =====================================================
@@ -459,121 +448,6 @@ async function handleDownloadData() {
 }
 
 // =====================================================
-// UTILITY FUNCTIONS
-// =====================================================
-
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-function redirectBasedOnRole(role) {
-  switch (role) {
-    case "admin":
-      window.location.href = "admin.html";
-      break;
-    case "auditor":
-      window.location.href = "auditor.html";
-      break;
-    default:
-      window.location.href = "dashboard.html";
-      break;
-  }
-}
-
-function showLoading(message = "Loading...") {
-  const overlay = document.getElementById("loading-overlay");
-  if (overlay) {
-    overlay.classList.remove("hidden");
-  }
-}
-
-function hideLoading() {
-  const overlay = document.getElementById("loading-overlay");
-  if (overlay) {
-    overlay.classList.add("hidden");
-  }
-}
-
-function showNotification(message, type = "info") {
-  // Remove existing notification
-  const existingNotif = document.getElementById("notification-toast");
-  if (existingNotif) {
-    existingNotif.remove();
-  }
-
-  const notif = document.createElement("div");
-  notif.id = "notification-toast";
-  notif.className = "fixed top-4 right-4 z-50";
-  notif.style.animation = "slideIn 0.3s ease-out";
-
-  const colors = {
-    success: "bg-green-500",
-    error: "bg-red-500",
-    warning: "bg-yellow-500",
-    info: "bg-blue-500",
-  };
-
-  const icons = {
-    success: "fa-check-circle",
-    error: "fa-times-circle",
-    warning: "fa-exclamation-triangle",
-    info: "fa-info-circle",
-  };
-
-  notif.innerHTML = `
-    <div class="${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[320px] max-w-md">
-      <i class="fas ${icons[type]} text-xl flex-shrink-0"></i>
-      <span class="flex-1">${message}</span>
-      <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200 transition-colors flex-shrink-0">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-  `;
-
-  document.body.appendChild(notif);
-
-  // Auto remove after 5 seconds
-  setTimeout(() => {
-    if (notif && notif.parentElement) {
-      notif.style.animation = "slideOut 0.3s ease-in";
-      setTimeout(() => notif.remove(), 300);
-    }
-  }, 5000);
-}
-
-// Add CSS animations
-const style = document.createElement("style");
-style.textContent = `
-  @keyframes slideIn {
-    from {
-      transform: translateX(400px);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-  
-  @keyframes slideOut {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(400px);
-      opacity: 0;
-    }
-  }
-`;
-document.head.appendChild(style);
-
-// =====================================================
 // DOWNLOAD PDF REPORT FUNCTIONALITY
 // =====================================================
 
@@ -585,10 +459,6 @@ function setupPDFReportListener() {
     console.log("✅ PDF report button listener added");
   }
 }
-
-// Call this function in setupEventListeners()
-// Add this line to the setupEventListeners() function:
-// setupPDFReportListener();
 
 // Handle download PDF report
 async function handleDownloadPDFReport() {
@@ -688,9 +558,9 @@ function generateDonorPDFReport(data) {
   const doc = new jsPDF();
 
   // Colors
-  const primaryColor = [30, 64, 175]; // Blue-800
-  const secondaryColor = [59, 130, 246]; // Blue-500
-  const headerBg = [219, 234, 254]; // Blue-100
+  const primaryColor = [30, 64, 175];
+  const secondaryColor = [59, 130, 246];
+  const headerBg = [219, 234, 254];
 
   // Page dimensions
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -698,26 +568,22 @@ function generateDonorPDFReport(data) {
   const margin = 15;
 
   // ===== HEADER =====
-  // Logo/Icon area
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.roundedRect(margin, margin, 15, 15, 2, 2, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
   doc.text("❤", margin + 4.5, margin + 11);
 
-  // Title
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setFontSize(20);
   doc.setFont(undefined, "bold");
   doc.text("DARIKITA", margin + 18, margin + 8);
 
-  // Subtitle
   doc.setFontSize(10);
   doc.setFont(undefined, "normal");
   doc.setTextColor(100, 100, 100);
   doc.text("Platform Donasi Digital", margin + 18, margin + 13);
 
-  // Report title
   doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
   doc.rect(margin, margin + 20, pageWidth - 2 * margin, 25, "F");
 
@@ -745,7 +611,6 @@ function generateDonorPDFReport(data) {
   });
   doc.text(`Tanggal Laporan: ${currentDate}`, margin + 5, yPos);
 
-  // Add period info if filters applied
   if (data.filters.startDate || data.filters.endDate) {
     yPos += 6;
     const startStr = data.filters.startDate
@@ -772,10 +637,8 @@ function generateDonorPDFReport(data) {
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
 
-  // Convert number to words for Indonesian (simple version)
-  const numberWords = convertNumberToWords(data.summary.totalTransactions);
   doc.text(
-    `Jumlah Transaksi: ${data.summary.totalTransactions} (${numberWords})`,
+    `Jumlah Transaksi: ${data.summary.totalTransactions}`,
     margin + 5,
     yPos
   );
@@ -798,7 +661,6 @@ function generateDonorPDFReport(data) {
 
   yPos += 8;
 
-  // Table data
   const tableData = data.donations.map((d, index) => [
     (index + 1).toString(),
     new Date(d.date).toLocaleDateString("id-ID"),
@@ -876,68 +738,32 @@ function generateDonorPDFReport(data) {
 // HELPER FUNCTIONS
 // =====================================================
 
-// Convert number to Indonesian words (1-10)
-function convertNumberToWords(num) {
-  const words = [
-    "",
-    "Satu",
-    "Dua",
-    "Tiga",
-    "Empat",
-    "Lima",
-    "Enam",
-    "Tujuh",
-    "Delapan",
-    "Sembilan",
-    "Sepuluh",
-  ];
-
-  if (num <= 10) {
-    return words[num];
-  } else if (num < 20) {
-    return words[num - 10] + " Belas";
-  } else if (num < 100) {
-    const tens = Math.floor(num / 10);
-    const ones = num % 10;
-    return words[tens] + " Puluh" + (ones > 0 ? " " + words[ones] : "");
-  } else if (num < 1000) {
-    const hundreds = Math.floor(num / 100);
-    const remainder = num % 100;
-    return (
-      (hundreds === 1 ? "Seratus" : words[hundreds] + " Ratus") +
-      (remainder > 0 ? " " + convertNumberToWords(remainder) : "")
-    );
-  } else {
-    return num.toString(); // Fallback for large numbers
-  }
-}
-
-// Capitalize first letter
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 // =====================================================
-// UPDATE setupEventListeners() FUNCTION
+// UTILITY FUNCTIONS
 // =====================================================
-// IMPORTANT: Add this line to the existing setupEventListeners() function:
-// setupPDFReportListener();
-//
-// The setupEventListeners() function should now look like this:
-//
-// function setupEventListeners() {
-//   // Logout buttons
-//   document.getElementById("logout-btn")?.addEventListener("click", handleLogout);
-//   document.getElementById("logout-btn-mobile")?.addEventListener("click", handleLogout);
-//
-//   // Mobile menu toggle
-//   document.getElementById("mobile-menu-btn")?.addEventListener("click", toggleMobileMenu);
-//
-//   // Download button (old JSON export)
-//   document.getElementById("download-btn")?.addEventListener("click", handleDownloadData);
-//
-//   // PDF Report button (NEW)
-//   setupPDFReportListener();
-// }
+
+function formatCurrency(amount) {
+  return window.utils.formatCurrency(amount);
+}
+
+function redirectBasedOnRole(role) {
+  window.utils.redirectBasedOnRole(role);
+}
+
+function showLoading(message) {
+  window.utils.showLoading(message);
+}
+
+function hideLoading() {
+  window.utils.hideLoading();
+}
+
+function showNotification(message, type) {
+  window.utils.showNotification(message, type);
+}
 
 console.log("✅ Dashboard.js loaded successfully");

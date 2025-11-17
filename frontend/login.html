@@ -108,9 +108,11 @@
       </div>
     </div>
 
-    <script>
-      const API_BASE_URL = "http://localhost:5000/api";
+    <!-- ✅ Load utils.js dan api.js SEBELUM login logic -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
 
+    <script>
       // Check if already logged in
       document.addEventListener("DOMContentLoaded", () => {
         const token = localStorage.getItem("token");
@@ -124,32 +126,13 @@
             console.log("User role:", user.role);
 
             // Redirect based on role
-            redirectBasedOnRole(user.role);
+            window.utils.redirectBasedOnRole(user.role);
           } catch (error) {
             console.error("Error parsing user data:", error);
             localStorage.clear();
           }
         }
       });
-
-      // Redirect based on role
-      function redirectBasedOnRole(role) {
-        switch (role) {
-          case "admin":
-            console.log("Redirecting to admin dashboard...");
-            window.location.href = "admin.html";
-            break;
-          case "auditor":
-            console.log("Redirecting to auditor dashboard...");
-            window.location.href = "auditor.html";
-            break;
-          case "donatur":
-          default:
-            console.log("Redirecting to user dashboard...");
-            window.location.href = "dashboard.html";
-            break;
-        }
-      }
 
       // Toggle password visibility
       function togglePassword() {
@@ -183,7 +166,7 @@
           loginBtn.disabled = true;
           loginBtn.innerHTML =
             '<i class="fas fa-spinner fa-spin mr-2"></i>Logging in...';
-          showLoading();
+          window.utils.showLoading();
 
           try {
             const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -220,7 +203,7 @@
               console.log("✅ Login successful!");
               console.log("💾 Data saved to localStorage");
 
-              showNotification(
+              window.utils.showNotification(
                 `Login berhasil! Selamat datang, ${user.name}!`,
                 "success"
               );
@@ -228,11 +211,11 @@
               // Redirect based on role after 1.5 seconds
               setTimeout(() => {
                 console.log("🔀 Redirecting based on role:", user.role);
-                redirectBasedOnRole(user.role);
+                window.utils.redirectBasedOnRole(user.role);
               }, 1500);
             } else {
               console.error("❌ Login failed:", data.message);
-              showNotification(
+              window.utils.showNotification(
                 data.message || "Login gagal. Periksa email dan password Anda.",
                 "error"
               );
@@ -244,7 +227,7 @@
             }
           } catch (error) {
             console.error("❌ Login error:", error);
-            showNotification(
+            window.utils.showNotification(
               error.message || "Terjadi kesalahan. Pastikan server berjalan.",
               "error"
             );
@@ -253,63 +236,9 @@
             loginBtn.disabled = false;
             loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Login';
           } finally {
-            hideLoading();
+            window.utils.hideLoading();
           }
         });
-
-      // Show loading overlay
-      function showLoading() {
-        document.getElementById("loading-overlay").classList.remove("hidden");
-      }
-
-      // Hide loading overlay
-      function hideLoading() {
-        document.getElementById("loading-overlay").classList.add("hidden");
-      }
-
-      // Show notification
-      function showNotification(message, type = "info") {
-        const existingNotif = document.getElementById("notification-toast");
-        if (existingNotif) {
-          existingNotif.remove();
-        }
-
-        const notif = document.createElement("div");
-        notif.id = "notification-toast";
-        notif.className = "fixed top-4 right-4 z-50 animate-slide-in";
-
-        const colors = {
-          success: "bg-green-500",
-          error: "bg-red-500",
-          warning: "bg-yellow-500",
-          info: "bg-blue-500",
-        };
-
-        const icons = {
-          success: "fa-check-circle",
-          error: "fa-times-circle",
-          warning: "fa-exclamation-triangle",
-          info: "fa-info-circle",
-        };
-
-        notif.innerHTML = `
-          <div class="${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px]">
-            <i class="fas ${icons[type]} text-xl"></i>
-            <span class="flex-1">${message}</span>
-            <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        `;
-
-        document.body.appendChild(notif);
-
-        setTimeout(() => {
-          if (notif && notif.parentElement) {
-            notif.remove();
-          }
-        }, 5000);
-      }
     </script>
 
     <style>

@@ -6,6 +6,7 @@
 let currentEditingCauseId = null;
 let selectedImageFile = null;
 let imagePreviewUrl = null;
+let selectedUserId = null;
 
 // Global state for transparency
 let currentEditingReportId = null;
@@ -934,6 +935,7 @@ function displayUsers(users) {
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Role</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Total Donasi</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Bergabung</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Aksi</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
@@ -970,6 +972,16 @@ function displayUsers(users) {
                   } donasi</div>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-600">${joinDate}</td>
+                <td class="px-6 py-4">
+                  <button
+                    onclick="openUserRoleModal('${user._id}', '${
+                user.role
+              }', '${user.name}', '${user.email}')"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    <i class="fas fa-user-edit mr-1"></i>Ubah Role
+                  </button>
+                </td>
               </tr>
             `;
             })
@@ -2212,117 +2224,77 @@ document
     }
   });
 
+// Function untuk open modal
+function openUserRoleModal(userId, currentRole, userName, userEmail) {
+  selectedUserId = userId;
+  document.getElementById("modal-user-name").textContent = userName;
+  document.getElementById("modal-user-email").textContent = userEmail;
+  document.getElementById("user-role-select").value = currentRole;
+  document.getElementById("user-role-modal").classList.remove("hidden");
+}
+
+// Function untuk close modal
+function closeUserRoleModal() {
+  document.getElementById("user-role-modal").classList.add("hidden");
+  selectedUserId = null;
+}
+
+// Function untuk submit role change
+async function submitUserRole() {
+  const newRole = document.getElementById("user-role-select").value;
+
+  try {
+    showLoading("Mengubah role...");
+
+    const response = await window.API.admin.updateUserRole(
+      selectedUserId,
+      newRole
+    );
+
+    if (response.success) {
+      showNotification("Role berhasil diubah!", "success");
+      closeUserRoleModal();
+      // ✅ PERBAIKAN: Ganti loadAllUsers() dengan loadUsers()
+      await loadUsers();
+    }
+
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    showNotification("Gagal mengubah role", "error");
+  }
+}
+
 // =====================================================
 // UTILITY FUNCTIONS
 // =====================================================
 function toggleSidebar() {
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.getElementById("sidebar-overlay");
-
-  if (sidebar && overlay) {
-    sidebar.classList.toggle("hidden-mobile");
-    overlay.classList.toggle("hidden");
-  }
+  window.utils.toggleSidebar();
 }
 
 function handleLogout() {
-  if (confirm("Apakah Anda yakin ingin keluar?")) {
-    window.API.auth.logout();
-    showNotification("Berhasil logout", "success");
-    setTimeout(() => {
-      window.location.href = "login.html";
-    }, 1500);
-  }
+  window.utils.logout();
 }
 
 function redirectBasedOnRole(role) {
-  switch (role) {
-    case "admin":
-      window.location.href = "admin.html";
-      break;
-    case "auditor":
-      window.location.href = "auditor.html";
-      break;
-    default:
-      window.location.href = "dashboard.html";
-      break;
-  }
+  window.utils.redirectBasedOnRole(role);
 }
 
 function formatCurrency(amount) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return window.utils.formatCurrency(amount);
 }
 
-function showLoading() {
-  const overlay = document.getElementById("loading-overlay");
-  if (overlay) overlay.classList.remove("hidden");
+function showLoading(message) {
+  window.utils.showLoading(message);
 }
 
 function hideLoading() {
-  const overlay = document.getElementById("loading-overlay");
-  if (overlay) overlay.classList.add("hidden");
+  window.utils.hideLoading();
 }
 
-function showNotification(message, type = "info") {
-  const existingNotif = document.getElementById("notification-toast");
-  if (existingNotif) existingNotif.remove();
-
-  const notif = document.createElement("div");
-  notif.id = "notification-toast";
-  notif.className = "fixed top-4 right-4 z-50";
-  notif.style.animation = "slideIn 0.3s ease-out";
-
-  const colors = {
-    success: "bg-green-500",
-    error: "bg-red-500",
-    warning: "bg-yellow-500",
-    info: "bg-blue-500",
-  };
-
-  const icons = {
-    success: "fa-check-circle",
-    error: "fa-times-circle",
-    warning: "fa-exclamation-triangle",
-    info: "fa-info-circle",
-  };
-
-  notif.innerHTML = `
-    <div class="${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[320px] max-w-md">
-      <i class="fas ${icons[type]} text-xl flex-shrink-0"></i>
-      <span class="flex-1">${message}</span>
-      <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200 transition-colors flex-shrink-0">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-  `;
-
-  document.body.appendChild(notif);
-
-  setTimeout(() => {
-    if (notif && notif.parentElement) {
-      notif.style.animation = "slideOut 0.3s ease-in";
-      setTimeout(() => notif.remove(), 300);
-    }
-  }, 5000);
+function showNotification(message, type) {
+  window.utils.showNotification(message, type);
 }
-
-const style = document.createElement("style");
-style.textContent = `
-  @keyframes slideIn {
-    from { transform: translateX(400px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  @keyframes slideOut {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(400px); opacity: 0; }
-  }
-`;
-document.head.appendChild(style);
 
 // =====================================================
 // EXPOSE GLOBAL FUNCTIONS
@@ -2348,5 +2320,8 @@ window.removeDocument = removeDocument;
 window.deleteExistingAttachment = deleteExistingAttachment;
 window.viewTransparencyReport = viewTransparencyReport;
 window.deleteTransparencyReport = deleteTransparencyReport;
+window.openUserRoleModal = openUserRoleModal;
+window.closeUserRoleModal = closeUserRoleModal;
+window.submitUserRole = submitUserRole;
 
 console.log("✅ Admin.js loaded successfully");

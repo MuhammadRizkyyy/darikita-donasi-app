@@ -73,6 +73,27 @@ const donationSchema = new mongoose.Schema(
     distributedAt: {
       type: Date,
     },
+    auditStatus: {
+      type: String,
+      enum: [
+        "pending_audit",
+        "audit_in_progress",
+        "audit_verified",
+        "audit_flagged",
+      ],
+      default: "pending_audit",
+    },
+    auditedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    auditedAt: {
+      type: Date,
+    },
+    auditNotes: {
+      type: String,
+      maxlength: [1000, "Audit notes cannot exceed 1000 characters"],
+    },
   },
   {
     timestamps: true,

@@ -53,6 +53,16 @@
       .fade-in-up {
         animation: fadeInUp 0.6s ease-out;
       }
+      /* Placeholder image style */
+      .placeholder-image {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
     </style>
   </head>
   <body class="bg-gray-50">
@@ -474,6 +484,30 @@
     <script>
       const API_BASE_URL = "http://localhost:5000/api";
 
+      // Generate placeholder image as data URL
+      function generatePlaceholder(text = "DariKita") {
+        const canvas = document.createElement("canvas");
+        canvas.width = 400;
+        canvas.height = 250;
+        const ctx = canvas.getContext("2d");
+
+        // Gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 400, 250);
+        gradient.addColorStop(0, "#667eea");
+        gradient.addColorStop(1, "#764ba2");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 400, 250);
+
+        // Text
+        ctx.fillStyle = "white";
+        ctx.font = "bold 32px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, 200, 125);
+
+        return canvas.toDataURL();
+      }
+
       // Check if user is already logged in
       document.addEventListener("DOMContentLoaded", () => {
         checkAuth();
@@ -494,6 +528,8 @@
             // Redirect based on role
             if (user.role === "admin") {
               window.location.href = "admin.html";
+            } else if (user.role === "auditor") {
+              window.location.href = "auditor.html";
             } else {
               window.location.href = "dashboard.html";
             }
@@ -556,12 +592,10 @@
                 (program) => `
               <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-hover">
                 <img
-                  src="${
-                    program.image || "https://via.placeholder.com/400x250"
-                  }"
+                  src="${program.image || generatePlaceholder()}"
                   alt="${program.title}"
                   class="w-full h-48 object-cover"
-                  onerror="this.src='https://via.placeholder.com/400x250?text=DariKita'"
+                  onerror="this.src='${generatePlaceholder()}'"
                 />
                 <div class="p-6">
                   <span class="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full mb-3">
@@ -647,5 +681,7 @@
         });
       });
     </script>
+
+    <script src="js/utils.js"></script>
   </body>
 </html>

@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/database");
+const auditorRoutes = require("./routes/auditor");
 
 // Initialize express
 const app = express();
@@ -45,6 +46,7 @@ app.use("/api/admin", require("./routes/admin"));
 app.use("/api/midtrans", require("./routes/midtrans"));
 app.use("/api/reports", require("./routes/report"));
 app.use("/api/transparency", require("./routes/transparency"));
+app.use("/api/auditor", auditorRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

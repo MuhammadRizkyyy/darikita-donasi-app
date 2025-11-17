@@ -56,6 +56,12 @@
           background-position: -200% 0;
         }
       }
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
     </style>
   </head>
   <body class="bg-gray-50">
@@ -342,6 +348,30 @@
       let currentPage = 1;
       const itemsPerPage = 9;
 
+      // Generate placeholder image as data URL
+      function generatePlaceholder(text = "DariKita") {
+        const canvas = document.createElement("canvas");
+        canvas.width = 400;
+        canvas.height = 250;
+        const ctx = canvas.getContext("2d");
+
+        // Gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 400, 250);
+        gradient.addColorStop(0, "#667eea");
+        gradient.addColorStop(1, "#764ba2");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 400, 250);
+
+        // Text
+        ctx.fillStyle = "white";
+        ctx.font = "bold 32px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, 200, 125);
+
+        return canvas.toDataURL();
+      }
+
       // Initialize
       document.addEventListener("DOMContentLoaded", async () => {
         checkAuth();
@@ -451,11 +481,13 @@
 
       // Display programs
       function displayPrograms() {
-        hideLoading();
-
         const grid = document.getElementById("programs-grid");
         const emptyState = document.getElementById("empty-state");
         const resultsInfo = document.getElementById("results-info");
+        const loadingState = document.getElementById("loading-state");
+
+        // Hide loading first
+        loadingState.classList.add("hidden");
 
         if (filteredCauses.length === 0) {
           grid.classList.add("hidden");
@@ -513,14 +545,16 @@
             '<span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">Ditutup</span>',
         };
 
+        const placeholderImg = generatePlaceholder();
+
         return `
           <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-hover">
             <div class="relative">
               <img
-                src="${cause.image || "https://via.placeholder.com/400x250"}"
+                src="${cause.image || placeholderImg}"
                 alt="${cause.title}"
                 class="w-full h-48 object-cover"
-                onerror="this.src='https://via.placeholder.com/400x250?text=DariKita'"
+                onerror="this.src='${placeholderImg}'"
               />
               <div class="absolute top-4 right-4">
                 ${statusBadges[cause.status] || statusBadges.active}
@@ -776,13 +810,6 @@
       }
     </script>
 
-    <style>
-      .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-    </style>
+    <script src="js/utils.js"></script>
   </body>
 </html>

@@ -280,6 +280,45 @@ const transparencyAPI = {
   },
 };
 
+// Auditor API
+const auditorAPI = {
+  getStats: async () => {
+    return await apiRequest("/auditor/stats");
+  },
+
+  getAllDonations: async (filters = {}) => {
+    const queryString = new URLSearchParams(filters).toString();
+    return await apiRequest(
+      `/auditor/donations${queryString ? "?" + queryString : ""}`
+    );
+  },
+
+  getDonationDetail: async (id) => {
+    return await apiRequest(`/auditor/donations/${id}`);
+  },
+
+  markAsAudited: async (id, data) => {
+    return await apiRequest(`/auditor/donations/${id}/audit`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  getAuditLogs: async (filters = {}) => {
+    const queryString = new URLSearchParams(filters).toString();
+    return await apiRequest(
+      `/auditor/logs${queryString ? "?" + queryString : ""}`
+    );
+  },
+
+  generateReport: async (filters = {}) => {
+    const queryString = new URLSearchParams(filters).toString();
+    return await apiRequest(
+      `/auditor/report${queryString ? "?" + queryString : ""}`
+    );
+  },
+};
+
 // Export APIs
 window.API = {
   auth: authAPI,
@@ -288,4 +327,5 @@ window.API = {
   admin: adminAPI,
   reports: reportsAPI,
   transparency: transparencyAPI,
+  auditor: auditorAPI,
 };

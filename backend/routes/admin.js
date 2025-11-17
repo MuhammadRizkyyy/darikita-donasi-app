@@ -10,6 +10,7 @@ const {
 } = require("../controllers/adminController");
 const { protect } = require("../middleware/auth");
 const { roleCheck } = require("../middleware/roleCheck");
+const { logAudit } = require("../middleware/auditLogger");
 
 const router = express.Router();
 
@@ -29,5 +30,18 @@ router.delete("/users/:id", deleteUser);
 router.get("/donations", getAllDonationsAdmin);
 router.put("/donations/:id/verify", verifyDonation);
 router.put("/donations/:id/distribution", updateDistributionStatus);
+
+// Add audit logging to sensitive operations
+router.put(
+  "/users/:id/role",
+  logAudit("user_role_changed", "User"),
+  updateUserRole
+);
+
+router.put(
+  "/donations/:id/verify",
+  logAudit("donation_verified", "Donation"),
+  verifyDonation
+);
 
 module.exports = router;
