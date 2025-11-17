@@ -78,9 +78,4 @@ darikita/
 - ✅ Audit trail
 - ✅ Generate audit reports
 
-
 Made with ❤️ by DariKita Team - UPNVJ
-# donasi-app-darikita
-# darikita-donasi-app
-# donasi-app-darikita
-# darikita-donasi-app
