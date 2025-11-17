@@ -133,7 +133,7 @@ async function loadDashboardStats() {
         overview.pendingAudit;
 
       // Display charts
-      displayTransparencyChart(charts.causesTransparency);
+      displayTransparencyChart(charts.causesAudit);
       displayCategoryChart(charts.donationsByCategory);
 
       // Load recent audits
@@ -149,7 +149,7 @@ async function loadDashboardStats() {
 }
 
 // =====================================================
-// DISPLAY TRANSPARENCY CHART
+// DISPLAY TRANSPARENCY CHART (Per Program Audit Status)
 // =====================================================
 function displayTransparencyChart(data) {
   const container = document.getElementById("transparency-chart");
@@ -159,7 +159,7 @@ function displayTransparencyChart(data) {
     container.innerHTML = `
       <div class="text-center py-8 text-gray-500">
         <i class="fas fa-chart-pie text-4xl mb-2"></i>
-        <p>Belum ada data transparansi</p>
+        <p>Belum ada data program untuk diaudit</p>
       </div>
     `;
     return;
@@ -168,22 +168,35 @@ function displayTransparencyChart(data) {
   data.slice(0, 5).forEach((cause) => {
     const percentage = cause.disbursementPercentage || 0;
     const remaining = cause.remainingFunds || 0;
+    const auditStatusColors = {
+      pending_audit: "bg-yellow-50 border-yellow-200",
+      audit_verified: "bg-green-50 border-green-200",
+      audit_flagged: "bg-red-50 border-red-200",
+      audit_in_progress: "bg-blue-50 border-blue-200",
+    };
+
+    const auditStatusIcons = {
+      pending_audit: { icon: "fa-clock", color: "yellow" },
+      audit_verified: { icon: "fa-check-circle", color: "green" },
+      audit_flagged: { icon: "fa-exclamation-circle", color: "red" },
+      audit_in_progress: { icon: "fa-hourglass-start", color: "blue" },
+    };
+
+    const statusInfo = auditStatusIcons[cause.auditStatus] || auditStatusIcons.pending_audit;
 
     const item = document.createElement("div");
-    item.className =
-      "border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors";
+    item.className = `border-2 rounded-lg p-4 hover:bg-opacity-75 transition-colors cursor-pointer ${
+      auditStatusColors[cause.auditStatus] || auditStatusColors.pending_audit
+    }`;
     item.innerHTML = `
       <div class="flex items-center justify-between mb-2">
-        <h4 class="font-semibold text-gray-900 text-sm">${cause.title}</h4>
-        <span class="text-xs font-bold ${
-          percentage >= 80
-            ? "text-green-600"
-            : percentage >= 50
-            ? "text-blue-600"
-            : "text-orange-600"
-        }">${percentage.toFixed(1)}%</span>
+        <div class="flex items-center gap-2">
+          <i class="fas ${statusInfo.icon} text-${statusInfo.color}-600"></i>
+          <h4 class="font-semibold text-gray-900 text-sm">${cause.title}</h4>
+        </div>
+        <span class="text-xs font-bold text-gray-700">${percentage.toFixed(1)}% Disalurkan</span>
       </div>
-      <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+      <div class="w-full bg-gray-300 rounded-full h-2 mb-2">
         <div class="h-2 rounded-full ${
           percentage >= 80
             ? "bg-green-500"
@@ -192,11 +205,24 @@ function displayTransparencyChart(data) {
             : "bg-orange-500"
         }" style="width: ${percentage}%"></div>
       </div>
-      <div class="flex items-center justify-between text-xs text-gray-600">
+      <div class="flex items-center justify-between text-xs text-gray-600 mb-2">
         <span>Terkumpul: ${formatCurrency(cause.currentAmount)}</span>
         <span>Sisa: ${formatCurrency(remaining)}</span>
       </div>
+      <div class="text-xs text-gray-500 flex items-center gap-1">
+        <i class="fas fa-info-circle"></i>
+        <span>Audit Status: <strong>${
+          cause.auditStatus === "pending_audit"
+            ? "Menunggu"
+            : cause.auditStatus === "audit_verified"
+            ? "Verified"
+            : cause.auditStatus === "audit_flagged"
+            ? "Flagged"
+            : "Sedang Diaudit"
+        }</strong></span>
+      </div>
     `;
+    item.onclick = () => viewCauseAuditDetail(cause._id);
     container.appendChild(item);
   });
 }
@@ -320,7 +346,7 @@ function handleNavigation(e) {
     // Load section data
     switch (section) {
       case "verify-donations":
-        loadDonationsForVerification();
+        loadCausesForAudit();
         break;
       case "audit-logs":
         loadAuditLogs();
@@ -338,13 +364,14 @@ function handleNavigation(e) {
 }
 
 // =====================================================
-// LOAD DONATIONS FOR VERIFICATION
+// LOAD CAUSES FOR AUDIT (Changed from Donations)
 // =====================================================
-async function loadDonationsForVerification(filters = {}) {
+async function loadCausesForAudit(filters = {}) {
   try {
-    showLoading("Memuat data donasi...");
+    showLoading("Memuat data program untuk audit...");
 
-    const response = await window.API.auditor.getAllDonations(filters);
+    // ✨ Changed from getAllDonations to getAllCauses
+    const response = await window.API.auditor.getAllCauses(filters);
 
     const container = document.getElementById("donations-list");
     container.innerHTML = "";
@@ -353,8 +380,9 @@ async function loadDonationsForVerification(filters = {}) {
       const wrapper = document.createElement("div");
       wrapper.className = "divide-y divide-gray-200";
 
-      response.data.forEach((donation) => {
-        const item = createDonationItem(donation);
+      response.data.forEach((cause) => {
+        // ✨ Changed from createDonationItem to createCauseAuditItem
+        const item = createCauseAuditItem(cause);
         wrapper.appendChild(item);
       });
 
@@ -363,23 +391,23 @@ async function loadDonationsForVerification(filters = {}) {
       container.innerHTML = `
         <div class="text-center py-12 text-gray-500">
           <i class="fas fa-inbox text-5xl mb-4"></i>
-          <p class="text-lg font-medium">Tidak ada donasi ditemukan</p>
+          <p class="text-lg font-medium">Tidak ada program ditemukan</p>
         </div>
       `;
     }
 
     hideLoading();
   } catch (error) {
-    console.error("❌ Error loading donations:", error);
+    console.error("❌ Error loading causes:", error);
     hideLoading();
-    showNotification("Gagal memuat data donasi", "error");
+    showNotification("Gagal memuat data program", "error");
   }
 }
 
 // =====================================================
-// CREATE DONATION ITEM
+// CREATE CAUSE AUDIT ITEM (Changed from Donation)
 // =====================================================
-function createDonationItem(donation) {
+function createCauseAuditItem(cause) {
   const div = document.createElement("div");
   div.className = "p-6 hover:bg-gray-50 transition-colors";
 
@@ -397,10 +425,10 @@ function createDonationItem(donation) {
     audit_flagged: "Flagged",
   };
 
-  const distributionLabels = {
-    pending: "Belum Disalurkan",
-    distributed: "Sudah Disalurkan",
-    used: "Sudah Digunakan",
+  const stats = cause.donationStats || {
+    totalReceived: 0,
+    totalDisbursed: 0,
+    totalDonations: 0,
   };
 
   div.innerHTML = `
@@ -408,34 +436,37 @@ function createDonationItem(donation) {
       <div class="flex-1">
         <div class="flex items-center mb-2">
           <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-            <i class="fas fa-hand-holding-heart text-blue-600"></i>
+            <i class="fas fa-heart text-blue-600"></i>
           </div>
           <div>
-            <h3 class="font-bold text-gray-900">${
-              donation.cause?.title || "N/A"
-            }</h3>
-            <p class="text-sm text-gray-600">${
-              donation.user?.name || "Anonymous"
-            } • ${new Date(donation.createdAt).toLocaleDateString("id-ID")}</p>
+            <h3 class="font-bold text-gray-900">${cause.title}</h3>
+            <p class="text-sm text-gray-600">Kategori: ${cause.category} • ${
+    stats.totalDonations
+  } donasi</p>
           </div>
         </div>
         <div class="ml-13 space-y-1">
           <p class="text-sm text-gray-700">
-            <span class="font-semibold">Jumlah:</span> ${formatCurrency(
-              donation.amount
+            <span class="font-semibold">Dana Masuk:</span> ${formatCurrency(
+              stats.totalReceived
             )}
           </p>
           <p class="text-sm text-gray-700">
-            <span class="font-semibold">Status Distribusi:</span> ${
-              distributionLabels[donation.distributionStatus]
-            }
+            <span class="font-semibold">Dana Keluar:</span> ${formatCurrency(
+              stats.totalDisbursed
+            )}
+          </p>
+          <p class="text-sm text-gray-700">
+            <span class="font-semibold">Sisa Dana:</span> ${formatCurrency(
+              cause.remainingFunds || stats.totalReceived - stats.totalDisbursed
+            )}
           </p>
           ${
-            donation.auditedBy
+            cause.auditedBy
               ? `
             <p class="text-xs text-gray-500">
-              Diaudit oleh: ${donation.auditedBy.name} pada ${new Date(
-                  donation.auditedAt
+              Diaudit oleh: ${cause.auditedBy?.name || "Unknown"} pada ${new Date(
+                  cause.auditedAt
                 ).toLocaleDateString("id-ID")}
             </p>
           `
@@ -445,16 +476,16 @@ function createDonationItem(donation) {
       </div>
       <div class="flex items-center gap-3">
         <span class="px-3 py-1 rounded-lg text-sm font-semibold ${
-          auditStatusColors[donation.auditStatus] ||
+          auditStatusColors[cause.auditStatus] ||
           auditStatusColors.pending_audit
         }">
-          ${auditStatusLabels[donation.auditStatus] || "Pending"}
+          ${auditStatusLabels[cause.auditStatus] || "Pending"}
         </span>
         <button
-          onclick="viewDonationDetail('${donation._id}')"
+          onclick="viewCauseAuditDetail('${cause._id}')"
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
         >
-          <i class="fas fa-eye mr-1"></i>Detail
+          <i class="fas fa-eye mr-1"></i>Detail & Audit
         </button>
       </div>
     </div>
@@ -464,42 +495,49 @@ function createDonationItem(donation) {
 }
 
 // =====================================================
-// VIEW DONATION DETAIL
+// VIEW CAUSE AUDIT DETAIL (Changed from Donation)
 // =====================================================
-async function viewDonationDetail(donationId) {
+async function viewCauseAuditDetail(causeId) {
   try {
-    showLoading("Memuat detail donasi...");
+    showLoading("Memuat detail program...");
 
-    const response = await window.API.auditor.getDonationDetail(donationId);
+    // ✨ Changed from getDonationDetail to getCauseDetail
+    const response = await window.API.auditor.getCauseDetail(causeId);
 
     if (response.success) {
-      const donation = response.data;
-      showDonationDetailModal(donation);
+      const { cause, donations, stats } = response.data;
+      showCauseAuditModal(cause, donations, stats);
     }
 
     hideLoading();
   } catch (error) {
-    console.error("❌ Error loading donation detail:", error);
+    console.error("❌ Error loading cause detail:", error);
     hideLoading();
-    showNotification("Gagal memuat detail donasi", "error");
+    showNotification("Gagal memuat detail program", "error");
   }
 }
 
 // =====================================================
-// SHOW DONATION DETAIL MODAL
+// SHOW CAUSE AUDIT MODAL (Changed from Donation)
 // =====================================================
-function showDonationDetailModal(donation) {
+function showCauseAuditModal(cause, donations, stats) {
   const modal = document.getElementById("donation-detail-modal");
   const auditDisabled =
-    donation.auditStatus === "audit_verified" ||
-    donation.auditStatus === "audit_flagged";
+    cause.auditStatus === "audit_verified" ||
+    cause.auditStatus === "audit_flagged";
 
   modal.innerHTML = `
-    <div class="bg-white rounded-2xl shadow-xl max-w-3xl w-full">
+    <div class="bg-white rounded-2xl shadow-xl max-w-4xl w-full">
       <!-- Modal Header -->
       <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl z-10">
         <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-gray-900">Detail Donasi</h2>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">${cause.title}</h2>
+            <p class="text-sm text-gray-600 mt-1">
+              <i class="fas fa-tag mr-1"></i>
+              <span class="capitalize">${cause.category}</span>
+            </p>
+          </div>
           <button onclick="closeDonationModal()" class="text-gray-400 hover:text-gray-600">
             <i class="fas fa-times text-2xl"></i>
           </button>
@@ -508,105 +546,101 @@ function showDonationDetailModal(donation) {
 
       <!-- Modal Body -->
       <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-        <!-- Donation Info -->
+        <!-- Program Info -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 class="font-bold text-gray-900 mb-3">Informasi Donasi</h3>
+          <h3 class="font-bold text-gray-900 mb-3">Informasi Program</h3>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <p class="text-sm text-gray-600">Donatur</p>
-              <p class="font-semibold text-gray-900">${
-                donation.user?.name || "Anonymous"
-              }</p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-600">Email</p>
-              <p class="font-semibold text-gray-900">${
-                donation.user?.email || "-"
-              }</p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-600">Program</p>
-              <p class="font-semibold text-gray-900">${
-                donation.cause?.title || "N/A"
-              }</p>
-            </div>
-            <div>
               <p class="text-sm text-gray-600">Kategori</p>
-              <p class="font-semibold text-gray-900 capitalize">${
-                donation.cause?.category || "N/A"
-              }</p>
+              <p class="font-semibold text-gray-900 capitalize">${cause.category}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-600">Jumlah Donasi</p>
-              <p class="font-semibold text-green-600 text-lg">${formatCurrency(
-                donation.amount
-              )}</p>
+              <p class="text-sm text-gray-600">Status</p>
+              <p class="font-semibold text-gray-900 capitalize">${cause.status}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-600">Tanggal</p>
-              <p class="font-semibold text-gray-900">${new Date(
-                donation.createdAt
-              ).toLocaleDateString("id-ID")}</p>
+              <p class="text-sm text-gray-600">Target Dana</p>
+              <p class="font-semibold text-gray-900">${formatCurrency(cause.targetAmount)}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-600">Dana Terkumpul</p>
+              <p class="font-semibold text-green-600 text-lg">${formatCurrency(stats.totalReceived)}</p>
             </div>
           </div>
         </div>
 
-        <!-- Distribution Info -->
+        <!-- Financial Summary -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+          <h3 class="font-bold text-gray-900 mb-4">Ringkasan Dana (Transparansi)</h3>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-green-500">
+              <p class="text-xs text-gray-600 mb-1">Dana Masuk</p>
+              <p class="text-2xl font-bold text-green-600">${formatCurrency(stats.totalReceived)}</p>
+              <p class="text-xs text-gray-500 mt-1">${stats.totalDonations} transaksi</p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-blue-500">
+              <p class="text-xs text-gray-600 mb-1">Dana Keluar</p>
+              <p class="text-2xl font-bold text-blue-600">${formatCurrency(stats.totalDisbursed)}</p>
+              <p class="text-xs text-gray-500 mt-1">${Math.round((stats.totalDisbursed / stats.totalReceived * 100))}% disalurkan</p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-orange-500">
+              <p class="text-xs text-gray-600 mb-1">Sisa Dana</p>
+              <p class="text-2xl font-bold text-orange-600">${formatCurrency(stats.totalReceived - stats.totalDisbursed)}</p>
+              <p class="text-xs text-gray-500 mt-1">${Math.round(((stats.totalReceived - stats.totalDisbursed) / stats.totalReceived * 100))}% sisa</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Donations List -->
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h3 class="font-bold text-gray-900 mb-3">Informasi Penyaluran</h3>
-          <div class="space-y-2">
-            <div>
-              <p class="text-sm text-gray-600">Status Penyaluran</p>
-              <p class="font-semibold text-gray-900 capitalize">${
-                donation.distributionStatus === "distributed"
-                  ? "Sudah Disalurkan"
-                  : donation.distributionStatus === "used"
-                  ? "Sudah Digunakan"
-                  : "Belum Disalurkan"
-              }</p>
-            </div>
+          <h3 class="font-bold text-gray-900 mb-3">
+            <i class="fas fa-list mr-2"></i>
+            Daftar Donasi dalam Program Ini
+          </h3>
+          <div class="space-y-2 max-h-64 overflow-y-auto">
             ${
-              donation.distributionNote
-                ? `
-              <div>
-                <p class="text-sm text-gray-600">Catatan Penyaluran</p>
-                <p class="text-gray-900">${donation.distributionNote}</p>
-              </div>
-            `
-                : ""
-            }
-            ${
-              donation.distributionProof &&
-              donation.distributionProof.length > 0
-                ? `
-              <div>
-                <p class="text-sm text-gray-600 mb-2">Bukti Penyaluran</p>
-                <div class="grid grid-cols-3 gap-2">
-                  ${donation.distributionProof
+              donations && donations.length > 0
+                ? donations
                     .map(
-                      (proof) => `
-                    <img src="${proof}" alt="Bukti" class="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80" onclick="window.open('${proof}', '_blank')">
-                  `
-                    )
-                    .join("")}
+                      (d) => `
+              <div class="bg-white rounded-lg p-3 border border-gray-200">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900">${d.user?.name || "Anonymous"}</p>
+                    <p class="text-xs text-gray-500">${new Date(d.createdAt).toLocaleDateString("id-ID")}</p>
+                  </div>
+                  <p class="text-sm font-bold text-green-600">${formatCurrency(d.amount)}</p>
                 </div>
+                <p class="text-xs text-gray-600 mt-1">
+                  Status: <span class="font-semibold">${
+                    d.status === "verified" ? "✓ Verified" : "Pending"
+                  }</span> | Distribusi: <span class="font-semibold">${
+                      d.distributionStatus === "distributed"
+                        ? "Disalurkan"
+                        : d.distributionStatus === "used"
+                        ? "Digunakan"
+                        : "Pending"
+                    }</span>
+                </p>
               </div>
             `
-                : ""
+                    )
+                    .join("")
+                : `<p class="text-gray-500 text-center py-4">Tidak ada donasi</p>`
             }
           </div>
         </div>
 
-        <!-- ✅ TAMPILKAN DOKUMEN AUDIT JIKA ADA -->
+        <!-- Audit Document -->
         ${
-          donation.auditDocument
+          cause.auditDocument
             ? `
         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
           <h3 class="font-bold text-gray-900 mb-3 flex items-center">
             <i class="fas fa-file-pdf text-red-600 mr-2"></i>
             Dokumen Audit yang Telah Diupload
           </h3>
-          <a href="${donation.auditDocument}" target="_blank" 
+          <a href="${cause.auditDocument}" target="_blank" 
              class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
             <i class="fas fa-download mr-2"></i>Download Dokumen Audit
           </a>
@@ -617,29 +651,27 @@ function showDonationDetailModal(donation) {
 
         <!-- Audit Form -->
         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <h3 class="font-bold text-gray-900 mb-3">Audit Verifikasi</h3>
-          <form id="audit-form" onsubmit="submitAudit(event, '${
-            donation._id
-          }')">
+          <h3 class="font-bold text-gray-900 mb-3">Verifikasi Audit Program</h3>
+          <form id="audit-form" onsubmit="submitCauseAudit(event, '${cause._id}')">
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Status Audit</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Status Audit Program</label>
                 <div class="flex gap-4">
                   <label class="flex items-center cursor-pointer ${
                     auditDisabled ? "opacity-50" : ""
                   }">
                     <input type="radio" name="auditStatus" value="audit_verified" ${
-                      donation.auditStatus === "audit_verified" ? "checked" : ""
+                      cause.auditStatus === "audit_verified" ? "checked" : ""
                     } ${auditDisabled ? "disabled" : ""} class="mr-2" required>
-                    <span class="text-gray-700">✓ Verified</span>
+                    <span class="text-gray-700">✓ Verified - Program Transparan</span>
                   </label>
                   <label class="flex items-center cursor-pointer ${
                     auditDisabled ? "opacity-50" : ""
                   }">
                     <input type="radio" name="auditStatus" value="audit_flagged" ${
-                      donation.auditStatus === "audit_flagged" ? "checked" : ""
+                      cause.auditStatus === "audit_flagged" ? "checked" : ""
                     } ${auditDisabled ? "disabled" : ""} class="mr-2" required>
-                    <span class="text-gray-700">⚠ Flagged</span>
+                    <span class="text-gray-700">⚠ Flagged - Ada Masalah</span>
                   </label>
                 </div>
               </div>
@@ -650,12 +682,12 @@ function showDonationDetailModal(donation) {
                   name="auditNotes"
                   rows="4"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Tambahkan catatan audit..."
+                  placeholder="Masukkan hasil audit program, catatan transparansi, rekomendasi, dll..."
                   ${auditDisabled ? "disabled" : ""}
-                >${donation.auditNotes || ""}</textarea>
+                >${cause.auditNotes || ""}</textarea>
               </div>
 
-              <!-- ✅ INPUT FILE UPLOAD PDF -->
+              <!-- File Upload -->
               ${
                 !auditDisabled
                   ? `
@@ -683,16 +715,14 @@ function showDonationDetailModal(donation) {
               }
 
               ${
-                donation.auditedBy
+                cause.auditedBy
                   ? `
                 <div class="bg-white border border-gray-200 rounded-lg p-3">
                   <p class="text-sm text-gray-600">Terakhir diaudit oleh:</p>
-                  <p class="font-semibold text-gray-900">${
-                    donation.auditedBy.name
-                  }</p>
-                  <p class="text-xs text-gray-500">${new Date(
-                    donation.auditedAt
-                  ).toLocaleString("id-ID")}</p>
+                  <p class="font-semibold text-gray-900">${cause.auditedBy?.name || "Unknown"}</p>
+                  <p class="text-xs text-gray-500">${new Date(cause.auditedAt).toLocaleString(
+                    "id-ID"
+                  )}</p>
                 </div>
               `
                   : ""
@@ -705,13 +735,13 @@ function showDonationDetailModal(donation) {
                   type="submit"
                   class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
-                  <i class="fas fa-check-circle mr-2"></i>Simpan Audit
+                  <i class="fas fa-check-circle mr-2"></i>Simpan Audit Program
                 </button>
               `
                   : `
                 <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
                   <i class="fas fa-check-circle text-green-600 text-2xl mb-2"></i>
-                  <p class="text-sm text-green-700 font-medium">Donasi sudah diaudit</p>
+                  <p class="text-sm text-green-700 font-medium">Program sudah diaudit</p>
                 </div>
               `
               }
@@ -726,9 +756,9 @@ function showDonationDetailModal(donation) {
 }
 
 // =====================================================
-// SUBMIT AUDIT
+// SUBMIT CAUSE AUDIT (Changed from Donation)
 // =====================================================
-async function submitAudit(event, donationId) {
+async function submitCauseAudit(event, causeId) {
   event.preventDefault();
 
   const form = event.target;
@@ -737,13 +767,12 @@ async function submitAudit(event, donationId) {
   const auditDocumentFile = document.getElementById("auditDocument")?.files[0];
 
   try {
-    showLoading("Menyimpan audit...");
+    showLoading("Menyimpan audit program...");
 
-    // ✅ Gunakan FormData jika ada file, JSON jika tidak
+    // ✨ Use FormData if there's a file, JSON otherwise
     let requestData;
 
     if (auditDocumentFile) {
-      // Ada file, gunakan FormData
       requestData = new FormData();
       requestData.append("auditStatus", auditStatus);
       requestData.append("auditNotes", auditNotes);
@@ -751,7 +780,6 @@ async function submitAudit(event, donationId) {
 
       console.log("📤 Uploading with file:", auditDocumentFile.name);
     } else {
-      // Tidak ada file, gunakan JSON biasa
       requestData = {
         auditStatus,
         auditNotes,
@@ -760,15 +788,16 @@ async function submitAudit(event, donationId) {
       console.log("📤 Submitting without file");
     }
 
-    const response = await window.API.auditor.markAsAudited(
-      donationId,
+    // ✨ Changed from markAsAudited to markCauseAudited
+    const response = await window.API.auditor.markCauseAudited(
+      causeId,
       requestData
     );
 
     if (response.success) {
-      showNotification("Audit berhasil disimpan!", "success");
+      showNotification("Audit program berhasil disimpan!", "success");
       closeDonationModal();
-      loadDonationsForVerification(); // Refresh list
+      loadCausesForAudit(); // Refresh list - changed from loadDonationsForVerification
     }
 
     hideLoading();
@@ -789,8 +818,8 @@ function closeDonationModal() {
 
 // Make it global
 window.closeDonationModal = closeDonationModal;
-window.viewDonationDetail = viewDonationDetail;
-window.submitAudit = submitAudit;
+window.viewCauseAuditDetail = viewCauseAuditDetail;
+window.submitCauseAudit = submitCauseAudit;
 
 // =====================================================
 // LOAD AUDIT LOGS
@@ -882,19 +911,19 @@ function createAuditLogItem(log) {
 }
 
 // =====================================================
-// FILTER DONATIONS
+// FILTER CAUSES (Changed from Donations)
 // =====================================================
 function filterDonations() {
-  const status = document.getElementById("filter-status").value;
   const auditStatus = document.getElementById("filter-audit-status").value;
+  const category = document.getElementById("filter-status").value; // Changed - filter by category not status
   const startDate = document.getElementById("filter-start-date").value;
 
   const filters = {};
-  if (status) filters.status = status;
   if (auditStatus) filters.auditStatus = auditStatus;
+  if (category) filters.category = category; // Changed - filter by category
   if (startDate) filters.startDate = startDate;
 
-  loadDonationsForVerification(filters);
+  loadCausesForAudit(filters); // Changed from loadDonationsForVerification
 }
 
 // =====================================================
@@ -922,10 +951,14 @@ async function loadCausesForReport() {
       const select = document.getElementById("report-cause-filter");
       select.innerHTML = '<option value="">Semua Program</option>';
 
-      response.data.forEach((cause) => {
+      // Extract unique categories
+      const categories = new Set(response.data.map(c => c.category));
+      
+      // Create category options
+      categories.forEach((category) => {
         const option = document.createElement("option");
-        option.value = cause._id;
-        option.textContent = cause.title;
+        option.value = category;
+        option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
         select.appendChild(option);
       });
     }
@@ -935,28 +968,28 @@ async function loadCausesForReport() {
 }
 
 // =====================================================
-// GENERATE AUDIT REPORT
+// GENERATE AUDIT REPORT (Now for Causes)
 // =====================================================
 async function generateAuditReport() {
   try {
-    showLoading("Menggenerate laporan audit...");
+    showLoading("Menggenerate laporan audit program...");
 
     const startDate = document.getElementById("report-start-date").value;
     const endDate = document.getElementById("report-end-date").value;
-    const causeId = document.getElementById("report-cause-filter").value;
+    const category = document.getElementById("report-cause-filter").value; // Changed from causeId
     const auditStatus = document.getElementById("report-audit-status").value;
 
     const filters = {};
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
-    if (causeId) filters.causeId = causeId;
-    if (auditStatus) filters.status = auditStatus;
+    if (category) filters.category = category; // Changed from causeId
+    if (auditStatus) filters.auditStatus = auditStatus;
 
     const response = await window.API.auditor.generateReport(filters);
 
     if (response.success) {
-      generateAuditPDF(response.data);
-      showNotification("Laporan audit berhasil di-generate!", "success");
+      generateCauseAuditPDF(response.data);
+      showNotification("Laporan audit program berhasil di-generate!", "success");
     }
 
     hideLoading();
@@ -968,9 +1001,9 @@ async function generateAuditReport() {
 }
 
 // =====================================================
-// GENERATE AUDIT PDF
+// GENERATE CAUSE AUDIT PDF
 // =====================================================
-function generateAuditPDF(data) {
+function generateCauseAuditPDF(data) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
@@ -1008,7 +1041,7 @@ function generateAuditPDF(data) {
   doc.setFontSize(16);
   doc.setFont(undefined, "bold");
   doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.text("LAPORAN AUDIT TRANSPARANSI", margin + 5, margin + 28);
+  doc.text("LAPORAN AUDIT TRANSPARANSI PROGRAM DONASI", margin + 5, margin + 28);
 
   let yPos = margin + 36;
 
@@ -1052,15 +1085,15 @@ function generateAuditPDF(data) {
   doc.setFontSize(11);
   doc.setFont(undefined, "bold");
   doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.text("RINGKASAN AUDIT:", margin + 5, yPos + 7);
+  doc.text("RINGKASAN AUDIT PROGRAM:", margin + 5, yPos + 7);
 
   yPos += 13;
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
 
   const summaryData = [
-    `Total Transaksi: ${data.summary.totalTransactions}`,
-    `Total Donasi: ${formatCurrency(data.summary.totalAmount)}`,
+    `Total Program: ${data.summary.totalPrograms}`,
+    `Total Dana: ${formatCurrency(data.summary.totalAmount)}`,
     `Verified: ${data.summary.verifiedCount}`,
     `Flagged: ${data.summary.flaggedCount}`,
     `Pending: ${data.summary.pendingCount}`,
@@ -1098,32 +1131,30 @@ function generateAuditPDF(data) {
 
   yPos += 12;
 
-  // ===== DONATIONS TABLE =====
+  // ===== CAUSES AUDIT TABLE =====
   doc.setFontSize(11);
   doc.setFont(undefined, "bold");
   doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.text("DETAIL TRANSAKSI DONASI:", margin, yPos);
+  doc.text("DETAIL AUDIT PROGRAM DONASI:", margin, yPos);
 
   yPos += 8;
 
-  const tableData = data.donations.map((d, index) => [
+  const tableData = data.causes.map((c, index) => [
     (index + 1).toString(),
-    new Date(d.date).toLocaleDateString("id-ID"),
-    d.donor.name,
-    d.cause.title.length > 25
-      ? d.cause.title.substring(0, 25) + "..."
-      : d.cause.title,
-    formatCurrency(d.amount),
-    d.auditStatus === "audit_verified"
+    c.title.length > 20 ? c.title.substring(0, 20) + "..." : c.title,
+    formatCurrency(c.totalReceived),
+    formatCurrency(c.totalDisbursed),
+    `${c.disbursementPercentage}%`,
+    c.auditStatus === "audit_verified"
       ? "Verified"
-      : d.auditStatus === "audit_flagged"
+      : c.auditStatus === "audit_flagged"
       ? "Flagged"
       : "Pending",
   ]);
 
   doc.autoTable({
     startY: yPos,
-    head: [["No", "Tanggal", "Donatur", "Program", "Jumlah", "Status Audit"]],
+    head: [["No", "Nama Program", "Dana Masuk", "Dana Keluar", "% Disalur", "Status Audit"]],
     body: tableData,
     theme: "striped",
     headStyles: {
@@ -1142,10 +1173,10 @@ function generateAuditPDF(data) {
     },
     columnStyles: {
       0: { halign: "center", cellWidth: 10 },
-      1: { halign: "center", cellWidth: 25 },
-      2: { halign: "left", cellWidth: 30 },
-      3: { halign: "left", cellWidth: 45 },
-      4: { halign: "right", cellWidth: 30 },
+      1: { halign: "left", cellWidth: 40 },
+      2: { halign: "right", cellWidth: 28 },
+      3: { halign: "right", cellWidth: 28 },
+      4: { halign: "center", cellWidth: 18 },
       5: { halign: "center", cellWidth: 25 },
     },
     margin: { left: margin, right: margin },
@@ -1171,7 +1202,7 @@ function generateAuditPDF(data) {
   }
 
   // Save PDF
-  const fileName = `Laporan_Audit_${data.generatedBy.name.replace(
+  const fileName = `Laporan_Audit_Program_${data.generatedBy.name.replace(
     /\s+/g,
     "_"
   )}_${new Date().toISOString().split("T")[0]}.pdf`;
