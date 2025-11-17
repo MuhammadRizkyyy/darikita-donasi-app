@@ -86,6 +86,31 @@ const causeSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // ✨ AUDIT FIELDS - Track audit status per cause/program
+    auditStatus: {
+      type: String,
+      enum: [
+        "pending_audit",
+        "audit_in_progress",
+        "audit_verified",
+        "audit_flagged",
+      ],
+      default: "pending_audit",
+    },
+    auditedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    auditedAt: {
+      type: Date,
+    },
+    auditNotes: {
+      type: String,
+      maxlength: [2000, "Audit notes cannot exceed 2000 characters"],
+    },
+    auditDocument: {
+      type: String, // URL to PDF/Image from Cloudinary
+    },
   },
   {
     timestamps: true,

@@ -12,6 +12,26 @@ exports.getAuditorStats = async (req, res) => {
     const totalCauses = await Cause.countDocuments();
     const activeCauses = await Cause.countDocuments({ status: "active" });
 
+    // Cause audit status
+    const auditStatusCounts = await Cause.aggregate([
+      {
+        $group: {
+          _id: "$auditStatus",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const pendingAudit = auditStatusCounts.find(
+      (s) => s._id === "pending_audit"
+    )?.count || 0;
+    const verifiedAudit = auditStatusCounts.find(
+      (s) => s._id === "audit_verified"
+    )?.count || 0;
+    const flaggedAudit = auditStatusCounts.find(
+      (s) => s._id === "audit_flagged"
+    )?.count || 0;
+
     // Donation statistics
     const totalDonationsResult = await Donation.aggregate([
       { $match: { status: "verified" } },
@@ -45,11 +65,6 @@ exports.getAuditorStats = async (req, res) => {
       distributedAmount: 0,
       count: 0,
     };
-
-    // Pending audit
-    const pendingAudit = await Donation.countDocuments({
-      auditStatus: { $in: ["pending_audit", "audit_in_progress"] },
-    });
 
     // Donations by month (last 6 months)
     const sixMonthsAgo = new Date();
@@ -96,13 +111,17 @@ exports.getAuditorStats = async (req, res) => {
       },
     ]);
 
-    // Transparency vs Donations (per cause)
-    const causesTransparency = await Cause.aggregate([
+    // ✨ UPDATED: Causes with audit status for transparency
+    const causesAudit = await Cause.aggregate([
       {
         $project: {
           title: 1,
+          category: 1,
           currentAmount: 1,
           disbursedAmount: 1,
+          auditStatus: 1,
+          auditedAt: 1,
+          auditedBy: 1,
           remainingFunds: {
             $subtract: ["$currentAmount", "$disbursedAmount"],
           },
@@ -137,11 +156,13 @@ exports.getAuditorStats = async (req, res) => {
           remainingAmount:
             totalDonations.totalAmount - distributed.distributedAmount,
           pendingAudit,
+          verifiedAudit,
+          flaggedAudit,
         },
         charts: {
           donationsByMonth,
           donationsByCategory,
-          causesTransparency,
+          causesAudit,
         },
       },
     });
@@ -155,16 +176,16 @@ exports.getAuditorStats = async (req, res) => {
   }
 };
 
-// @desc    Get all donations for audit
-// @route   GET /api/auditor/donations
+// @desc    Get all causes for audit (not individual donations)
+// @route   GET /api/auditor/causes
 // @access  Private/Auditor
-exports.getAllDonationsForAudit = async (req, res) => {
+exports.getAllCausesForAudit = async (req, res) => {
   try {
-    const { status, auditStatus, startDate, endDate } = req.query;
+    const { auditStatus, category, startDate, endDate } = req.query;
     let filter = {};
 
-    if (status) filter.status = status;
     if (auditStatus) filter.auditStatus = auditStatus;
+    if (category) filter.category = category;
 
     if (startDate || endDate) {
       filter.createdAt = {};
@@ -172,67 +193,154 @@ exports.getAllDonationsForAudit = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
 
-    const donations = await Donation.find(filter)
-      .populate("user", "name email")
-      .populate("cause", "title category")
-      .populate("verifiedBy", "name")
-      .populate("auditedBy", "name")
+    const causes = await Cause.find(filter)
+      .populate("createdBy", "name email")
+      .populate("auditedBy", "name email")
       .sort({ createdAt: -1 });
+
+    // Enrich dengan donation stats untuk setiap cause
+    const causesWithStats = await Promise.all(
+      causes.map(async (cause) => {
+        const donationStats = await Donation.aggregate([
+          { $match: { cause: cause._id } },
+          {
+            $group: {
+              _id: null,
+              totalReceived: {
+                $sum: {
+                  $cond: [{ $eq: ["$status", "verified"] }, "$amount", 0],
+                },
+              },
+              totalDisbursed: {
+                $sum: {
+                  $cond: [
+                    {
+                      $in: [
+                        "$distributionStatus",
+                        ["distributed", "used"],
+                      ],
+                    },
+                    "$amount",
+                    0,
+                  ],
+                },
+              },
+              totalDonations: { $sum: 1 },
+              verifiedDonations: {
+                $sum: {
+                  $cond: [{ $eq: ["$status", "verified"] }, 1, 0],
+                },
+              },
+            },
+          },
+        ]);
+
+        const stats = donationStats[0] || {
+          totalReceived: 0,
+          totalDisbursed: 0,
+          totalDonations: 0,
+          verifiedDonations: 0,
+        };
+
+        return {
+          ...cause.toObject(),
+          donationStats: stats,
+          remainingFunds: stats.totalReceived - stats.totalDisbursed,
+          disbursementPercentage:
+            stats.totalReceived > 0
+              ? Math.round(
+                  (stats.totalDisbursed / stats.totalReceived) * 100
+                )
+              : 0,
+        };
+      })
+    );
 
     res.json({
       success: true,
-      count: donations.length,
-      data: donations,
+      count: causesWithStats.length,
+      data: causesWithStats,
     });
   } catch (error) {
-    console.error("Error fetching donations:", error);
+    console.error("Error fetching causes for audit:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching donations for audit",
+      message: "Error fetching causes for audit",
       error: error.message,
     });
   }
 };
 
-// @desc    Get single donation with full details
-// @route   GET /api/auditor/donations/:id
+// @desc    Get cause audit detail with all donations in that cause
+// @route   GET /api/auditor/causes/:id
 // @access  Private/Auditor
-exports.getDonationDetail = async (req, res) => {
+exports.getCauseAuditDetail = async (req, res) => {
   try {
-    const donation = await Donation.findById(req.params.id)
-      .populate("user", "name email phone")
-      .populate(
-        "cause",
-        "title category description targetAmount currentAmount"
-      )
-      .populate("verifiedBy", "name email")
+    const cause = await Cause.findById(req.params.id)
+      .populate("createdBy", "name email phone")
       .populate("auditedBy", "name email");
 
-    if (!donation) {
+    if (!cause) {
       return res.status(404).json({
         success: false,
-        message: "Donation not found",
+        message: "Cause not found",
       });
     }
 
+    // Get all donations for this cause
+    const donations = await Donation.find({ cause: req.params.id })
+      .populate("user", "name email phone")
+      .populate("verifiedBy", "name")
+      .sort({ createdAt: -1 });
+
+    // Calculate summary statistics
+    const stats = {
+      totalDonations: donations.length,
+      totalReceived: donations
+        .filter((d) => d.status === "verified")
+        .reduce((sum, d) => sum + d.amount, 0),
+      totalDisbursed: donations
+        .filter((d) => d.distributionStatus === "distributed" || d.distributionStatus === "used")
+        .reduce((sum, d) => sum + d.amount, 0),
+      verifiedDonations: donations.filter(
+        (d) => d.status === "verified"
+      ).length,
+      pendingDonations: donations.filter(
+        (d) => d.status === "pending"
+      ).length,
+      failedDonations: donations.filter(
+        (d) => d.status === "failed"
+      ).length,
+    };
+
+    stats.remainingFunds = stats.totalReceived - stats.totalDisbursed;
+    stats.disbursementPercentage =
+      stats.totalReceived > 0
+        ? Math.round((stats.totalDisbursed / stats.totalReceived) * 100)
+        : 0;
+
     res.json({
       success: true,
-      data: donation,
+      data: {
+        cause: cause.toObject(),
+        donations,
+        stats,
+      },
     });
   } catch (error) {
-    console.error("Error fetching donation detail:", error);
+    console.error("Error fetching cause audit detail:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching donation detail",
+      message: "Error fetching cause audit detail",
       error: error.message,
     });
   }
 };
 
-// @desc    Mark donation as audited
-// @route   PUT /api/auditor/donations/:id/audit
+// @desc    Mark cause/program as audited
+// @route   PUT /api/auditor/causes/:id/audit
 // @access  Private/Auditor
-exports.markDonationAudited = async (req, res) => {
+exports.markCauseAudited = async (req, res) => {
   try {
     const { auditStatus, auditNotes } = req.body;
 
@@ -243,34 +351,34 @@ exports.markDonationAudited = async (req, res) => {
       });
     }
 
-    const donation = await Donation.findById(req.params.id);
+    const cause = await Cause.findById(req.params.id);
 
-    if (!donation) {
+    if (!cause) {
       return res.status(404).json({
         success: false,
-        message: "Donation not found",
+        message: "Cause not found",
       });
     }
 
-    // Update audit status
-    donation.auditStatus = auditStatus;
-    donation.auditedBy = req.user.id;
-    donation.auditedAt = Date.now();
-    donation.auditNotes = auditNotes || "";
+    // Update cause audit status
+    cause.auditStatus = auditStatus;
+    cause.auditedBy = req.user.id;
+    cause.auditedAt = Date.now();
+    cause.auditNotes = auditNotes || "";
 
-    // ✅ NEW: Save audit document URL if file uploaded
+    // ✅ Save audit document URL if file uploaded
     if (req.file) {
-      donation.auditDocument = req.file.path; // Cloudinary URL
+      cause.auditDocument = req.file.path; // Cloudinary URL
     }
 
-    await donation.save();
+    await cause.save();
 
     // Create audit log
     await AuditLog.create({
       actor: req.user.id,
-      action: "audit_report_verified",
-      targetType: "Donation",
-      targetId: donation._id,
+      action: auditStatus === "audit_verified" ? "audit_report_verified" : "audit_report_flagged",
+      targetType: "Cause",
+      targetId: cause._id,
       changes: {
         auditStatus: {
           from: "pending_audit",
@@ -278,21 +386,21 @@ exports.markDonationAudited = async (req, res) => {
         },
       },
       metadata: {
-        description: `Donation ${donation._id} marked as ${auditStatus}`,
+        description: `Cause "${cause.title}" marked as ${auditStatus}`,
         auditDocument: req.file ? req.file.path : null,
       },
     });
 
     res.json({
       success: true,
-      message: "Donation audit status updated successfully",
-      data: donation,
+      message: "Cause audit status updated successfully",
+      data: cause,
     });
   } catch (error) {
-    console.error("Error updating audit status:", error);
+    console.error("Error updating cause audit status:", error);
     res.status(500).json({
       success: false,
-      message: "Error updating audit status",
+      message: "Error updating cause audit status",
       error: error.message,
     });
   }
@@ -337,13 +445,13 @@ exports.getAuditLogs = async (req, res) => {
   }
 };
 
-// @desc    Generate audit report (PDF data)
+// @desc    Generate audit report for causes (not individual donations)
 // @route   GET /api/auditor/report
 // @access  Private/Auditor
 exports.generateAuditReport = async (req, res) => {
   try {
-    const { startDate, endDate, causeId, status } = req.query;
-    let filter = { status: "verified" };
+    const { startDate, endDate, category, auditStatus } = req.query;
+    let filter = {};
 
     if (startDate || endDate) {
       filter.createdAt = {};
@@ -351,35 +459,74 @@ exports.generateAuditReport = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
 
-    if (causeId) filter.cause = causeId;
-    if (status) filter.auditStatus = status;
+    if (category) filter.category = category;
+    if (auditStatus) filter.auditStatus = auditStatus;
 
-    const donations = await Donation.find(filter)
-      .populate("user", "name email")
-      .populate("cause", "title category")
+    const causes = await Cause.find(filter)
+      .populate("createdBy", "name email")
       .populate("auditedBy", "name")
       .sort({ createdAt: -1 });
 
+    // Enrich dengan donation stats
+    const causesReport = await Promise.all(
+      causes.map(async (cause) => {
+        const donations = await Donation.find({ cause: cause._id });
+        const verifiedDonations = donations.filter(
+          (d) => d.status === "verified"
+        );
+        const totalReceived = verifiedDonations.reduce(
+          (sum, d) => sum + d.amount,
+          0
+        );
+        const totalDisbursed = donations
+          .filter((d) => d.distributionStatus === "distributed" || d.distributionStatus === "used")
+          .reduce((sum, d) => sum + d.amount, 0);
+
+        return {
+          _id: cause._id,
+          title: cause.title,
+          category: cause.category,
+          createdBy: cause.createdBy,
+          totalReceived,
+          totalDisbursed,
+          remainingAmount: totalReceived - totalDisbursed,
+          disbursementPercentage:
+            totalReceived > 0
+              ? Math.round((totalDisbursed / totalReceived) * 100)
+              : 0,
+          auditStatus: cause.auditStatus,
+          auditedBy: cause.auditedBy,
+          auditedAt: cause.auditedAt,
+          auditNotes: cause.auditNotes,
+          donationCount: donations.length,
+          verifiedDonationCount: verifiedDonations.length,
+        };
+      })
+    );
+
     // Calculate statistics
-    const totalAmount = donations.reduce((sum, d) => sum + d.amount, 0);
-    const verifiedCount = donations.filter(
-      (d) => d.auditStatus === "audit_verified"
+    const totalAmount = causesReport.reduce(
+      (sum, c) => sum + c.totalReceived,
+      0
+    );
+    const verifiedCount = causesReport.filter(
+      (c) => c.auditStatus === "audit_verified"
     ).length;
-    const flaggedCount = donations.filter(
-      (d) => d.auditStatus === "audit_flagged"
+    const flaggedCount = causesReport.filter(
+      (c) => c.auditStatus === "audit_flagged"
     ).length;
-    const pendingCount = donations.filter(
-      (d) => d.auditStatus === "pending_audit"
+    const pendingCount = causesReport.filter(
+      (c) => c.auditStatus === "pending_audit"
     ).length;
 
-    // Distributed vs remaining
-    const distributedAmount = donations
-      .filter((d) => d.distributionStatus === "distributed")
-      .reduce((sum, d) => sum + d.amount, 0);
+    const distributedAmount = causesReport.reduce(
+      (sum, c) => sum + c.totalDisbursed,
+      0
+    );
 
     const reportData = {
       summary: {
-        totalTransactions: donations.length,
+        totalPrograms: causesReport.length,
         totalAmount,
         verifiedCount,
         flaggedCount,
@@ -387,30 +534,12 @@ exports.generateAuditReport = async (req, res) => {
         distributedAmount,
         remainingAmount: totalAmount - distributedAmount,
       },
-      donations: donations.map((d) => ({
-        _id: d._id,
-        date: d.createdAt,
-        donor: {
-          name: d.user?.name || "Anonymous",
-          email: d.user?.email || "-",
-        },
-        cause: {
-          title: d.cause?.title || "N/A",
-          category: d.cause?.category || "N/A",
-        },
-        amount: d.amount,
-        status: d.status,
-        distributionStatus: d.distributionStatus,
-        auditStatus: d.auditStatus,
-        auditedBy: d.auditedBy?.name || "-",
-        auditedAt: d.auditedAt || null,
-        auditNotes: d.auditNotes || "-",
-      })),
+      causes: causesReport,
       filters: {
         startDate: startDate || null,
         endDate: endDate || null,
-        causeId: causeId || null,
-        status: status || null,
+        category: category || null,
+        auditStatus: auditStatus || null,
       },
       generatedAt: new Date(),
       generatedBy: {

@@ -278,21 +278,23 @@ const auditorAPI = {
   getStats: async () => {
     return await apiRequest("/auditor/stats");
   },
-  getAllDonations: async (filters = {}) => {
+  // ✨ UPDATED: Changed from getAllDonations to getAllCauses - audit per program
+  getAllCauses: async (filters = {}) => {
     const queryString = new URLSearchParams(filters).toString();
     return await apiRequest(
-      `/auditor/donations${queryString ? "?" + queryString : ""}`
+      `/auditor/causes${queryString ? "?" + queryString : ""}`
     );
   },
-  getDonationDetail: async (id) => {
-    return await apiRequest(`/auditor/donations/${id}`);
+  // ✨ UPDATED: Changed from getDonationDetail to getCauseDetail
+  getCauseDetail: async (id) => {
+    return await apiRequest(`/auditor/causes/${id}`);
   },
-  // ✅ UPDATED: Support both JSON and FormData
-  markAsAudited: async (id, data) => {
+  // ✨ UPDATED: Changed from markAsAudited (donations) to markCauseAudited
+  markCauseAudited: async (id, data) => {
     const isFormData = data instanceof FormData;
-    return await apiRequest(`/auditor/donations/${id}/audit`, {
+    return await apiRequest(`/auditor/causes/${id}/audit`, {
       method: "PUT",
-      body: isFormData ? data : JSON.stringify(data), // Don't stringify FormData
+      body: isFormData ? data : JSON.stringify(data),
     });
   },
   getAuditLogs: async (filters = {}) => {
