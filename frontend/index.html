@@ -131,23 +131,39 @@
           <!-- User Profile Menu (Hidden by default) -->
           <div id="user-menu" class="hidden flex items-center space-x-4">
             <div class="relative group">
-              <button class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+              <button
+                class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors font-medium"
+              >
+                <div
+                  class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold"
+                >
                   <span id="user-initial">U</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs"></i>
               </button>
-              
+
               <!-- Dropdown Menu -->
-              <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-20">
-                <a href="dashboard.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-t-lg transition-colors">
+              <div
+                id="user-dropdown"
+                class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-20"
+              >
+                <a
+                  href="dashboard.html"
+                  class="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-t-lg transition-colors"
+                >
                   <i class="fas fa-chart-line mr-2"></i>Dashboard
                 </a>
-                <a href="causes.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors">
+                <a
+                  href="causes.html"
+                  class="block px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                >
                   <i class="fas fa-heart mr-2"></i>Program Donasi
                 </a>
-                <hr class="my-2">
-                <button onclick="logoutUser()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-b-lg transition-colors">
+                <hr class="my-2" />
+                <button
+                  onclick="logoutUser()"
+                  class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-b-lg transition-colors"
+                >
                   <i class="fas fa-sign-out-alt mr-2"></i>Logout
                 </button>
               </div>
@@ -561,8 +577,8 @@
 
             // Update user initial
             const userInitial = document.getElementById("user-initial");
-            if (userInitial) userInitial.textContent = (user.name || "U")[0].toUpperCase();
-
+            if (userInitial)
+              userInitial.textContent = (user.name || "U")[0].toUpperCase();
           } catch (error) {
             console.error("Error checking auth:", error);
             localStorage.clear();
@@ -600,7 +616,7 @@
           localStorage.removeItem("token");
           localStorage.removeItem("userData");
           console.log("👋 User logged out");
-          
+
           // Refresh page to update UI
           window.location.reload();
         }
@@ -749,5 +765,6 @@
     </script>
 
     <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
   </body>
 </html>
