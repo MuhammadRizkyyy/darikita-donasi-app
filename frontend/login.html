@@ -74,7 +74,7 @@
         <div class="mt-6 text-center">
           <p class="text-gray-600">
             Belum punya akun?
-            <a
+            
               href="register.html"
               class="text-blue-600 hover:text-blue-800 font-semibold"
             >
@@ -85,7 +85,7 @@
 
         <!-- Back to Home -->
         <div class="mt-4 text-center">
-          <a
+          
             href="index.html"
             class="text-gray-500 hover:text-gray-700 text-sm"
           >
@@ -108,8 +108,9 @@
       </div>
     </div>
 
-    <!-- ✅ Load utils.js dan api.js SEBELUM login logic -->
+    <!-- ⭐⭐⭐ URUTAN YANG BENAR! -->
     <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>  <!-- ⭐ HARUS DI SINI! -->
     <script src="js/api.js"></script>
 
     <script>
@@ -161,6 +162,7 @@
           const loginBtn = document.getElementById("login-btn");
 
           console.log("🔐 Attempting login for:", email);
+          console.log("🔗 Using API_BASE_URL:", window.API_BASE_URL);
 
           // Disable button and show loading
           loginBtn.disabled = true;
@@ -169,7 +171,7 @@
           window.utils.showLoading();
 
           try {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            const response = await fetch(`${window.API_BASE_URL}/auth/login`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -181,7 +183,6 @@
             console.log("📡 Full login response:", data);
 
             if (response.ok && data.success) {
-              // PERBAIKAN: Akses struktur data yang benar dari backend
               const token = data.data.token;
               const user = data.data.user;
 
@@ -189,14 +190,12 @@
               console.log("👤 User data:", user);
               console.log("👤 User role:", user.role);
 
-              // Validasi data
               if (!token || !user || !user.role) {
                 throw new Error(
                   "Invalid response structure - missing token, user, or role"
                 );
               }
 
-              // Save token and complete user data
               localStorage.setItem("token", token);
               localStorage.setItem("userData", JSON.stringify(user));
 
@@ -208,7 +207,6 @@
                 "success"
               );
 
-              // Redirect based on role after 1.5 seconds
               setTimeout(() => {
                 console.log("🔀 Redirecting based on role:", user.role);
                 window.utils.redirectBasedOnRole(user.role);
@@ -220,7 +218,6 @@
                 "error"
               );
 
-              // Re-enable button
               loginBtn.disabled = false;
               loginBtn.innerHTML =
                 '<i class="fas fa-sign-in-alt mr-2"></i>Login';
@@ -232,7 +229,6 @@
               "error"
             );
 
-            // Re-enable button
             loginBtn.disabled = false;
             loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Login';
           } finally {
@@ -256,6 +252,5 @@
         animation: slide-in 0.3s ease-out;
       }
     </style>
-    <script src="js/config.js"></script>
   </body>
 </html>
